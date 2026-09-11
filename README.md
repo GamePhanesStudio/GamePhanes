@@ -16,11 +16,23 @@ instruction -> inspect -> edit -> run -> observe -> diagnose -> repair -> verify
 
 The benchmark target is a coding agent, not a player bot. Evaluator-controlled probes provide runtime evidence; the agent is judged on engineering work, debugging, behavior, and regression resistance.
 
+## How It Differs From Related Benchmarks
+
+**SWE-bench** treats a resolved GitHub issue as the task and checks whether the repo's existing test suite passes after the patch. The reward is binary and the environment is a layered Docker image built from the original repo. It tests general software engineering but has no engine runtime.
+
+**JAMER** (arxiv 2606.19830) generates Godot projects from theme keywords and measures structural completeness (SCS) and behavioral alignment (BAS) using headless Godot runs. It uses Claude Code as the agent harness with model-swapping. Its metrics are continuous rather than binary and the tasks are generative rather than repair.
+
+**GameCraft-Bench** (arxiv 2606.17861) covers 140 Godot tasks across 15 game families and judges agent output by replaying recorded gameplay through a multimodal LLM rubric judge. The top frontier agent reached 41.5% on its scale.
+
+GameForgeBench differs on three points. First, every task is an existing-project repair inside a real engine (Unity, Godot, Minecraft, Roblox, C++), not a generative or pure-function task. Second, the reward is determined solely by task-specific runtime behavior checked by a deterministic native probe — file presence and project parse are supporting gates only and cannot produce a passing reward on their own. Third, the scoring design is explicit: binary reward (1 when all required behavior checks pass, 0 otherwise) plus an optional post-hoc diagnostic score, with no LLM judge in the scoring path.
+
 ## Open Release
 
-The release corpus contains **81 completed executable tasks** spanning Godot, Unity, Roblox, Minecraft, Unreal, Web, and generic engine projects. The tasks cover gameplay systems, engine/runtime work, UI and interaction, plugins, persistence, callbacks, build workflows, and delivery quality.
+The corpus contains **81 normalized executable candidates** spanning Godot, Unity, Roblox, Minecraft, Unreal, Web, and generic engine projects. A separate real-behavior audit currently validates 14/81 native-runtime bundles; the remaining candidates stay visible with explicit pending reasons while they are being hardened for research release. The Harbor 0.22.0 reproducibility audit currently validates 3/81 task bundles; legacy Forge controls are not counted as Harbor evidence. This paper-facing audit prioritizes real engine behavior and current oracle/no-op controls; vendor-specific delivery packaging is tracked separately.
 
 Each task is a self-contained contract with a starter project, a natural-language request, a reproducible environment, protected files, a reference solution, and executable acceptance checks. The public upload includes one representative task so the complete workflow can be inspected without downloading the full corpus.
+
+The current Harbor 0.22.0 staging archive is [`release/gameforgebench-harbor-0.22.0-staging-v6.zip`](release/gameforgebench-harbor-0.22.0-staging-v6.zip). It contains the three tasks with current Linux amd64 Harbor oracle/no-op controls, a digest-pinned `dataset.toml`, package checksums, an in-package audit, and in-package control evidence. The remaining 78 candidates are intentionally excluded until their current Docker and Harbor controls pass.
 
 ## Featured Task
 
@@ -68,6 +80,14 @@ task-name/
 
 Tasks must not depend on a contributor's local absolute path, private package registry, undisclosed asset, network download at evaluation time, or interactive GUI step.
 
+To audit the open-source package layout and current Harbor controls:
+
+```bash
+python3 scripts/audit_harbor_022_reproducibility.py
+```
+
+Only tasks with a current Harbor 0.22.0 oracle/no-op run record are counted as reproducible.
+
 ## How To Run The Example
 
 Requires Godot 4.6.1 for local inspection and Docker for the hermetic verifier.
@@ -89,6 +109,8 @@ GameForgeBench separates four layers of evidence:
 4. **Diagnostics**: invariant-level results explaining the outcome.
 
 This separation distinguishes a plausible file edit from a project that actually behaves correctly when the engine runs it.
+
+The scoring design is explicit and simple: each check is binary (pass or fail), and the primary Harbor task reward is 1 only when all required checks pass, otherwise 0. An optional post-hoc diagnostic score in [0, 1] can be computed from `passed_checks / total_checks` for near-miss analysis, but it is never substituted for the primary reward. File presence and project parse checks are supporting gates only — a passing reward cannot be obtained from them alone.
 
 ## Task Quality Bar
 

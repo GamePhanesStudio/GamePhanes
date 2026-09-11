@@ -10,7 +10,7 @@
 
 ## 项目是什么
 
-传统 Terminal Benchmark 通常评估文件、命令和退出码。交互软件还有第二层真相：工程必须成功导入、启动、接受受控输入、改变运行时状态并产生预期行为。Game Terminal-Bench 评估的正是这个完整闭环。
+传统 Terminal Benchmark 通常评估文件、命令和退出码。交互软件还有第二层真相：工程必须成功导入、启动、接受受控输入、改变运行时状态并产生预期行为。GameForgeBench 评估的正是这个完整闭环。
 
 ```text
 任务说明 -> 检查 -> 修改 -> 运行 -> 观察 -> 诊断 -> 修复 -> 验证
@@ -19,6 +19,18 @@
 评测对象是 Coding Agent，不是玩家 Bot。Harness 的输入由评测器控制，只用于获得提交代码的运行证据。Agent 被评估的是工程能力：代码修改、调试、运行时行为和对回归的控制。
 
 本项目是基于 Harbor 任务契约构建的独立数据集。它兼容 Harbor 的执行方式，但不是 Terminal-Bench 2.0、TB-Science 的子集，也不属于它们的 leaderboard。
+
+## 与同类 Benchmark 的对比
+
+**SWE-bench** 以真实 GitHub Issue 为任务，检查 Patch 后仓库自带的测试套件是否通过。奖励是二元的，环境是从原始仓库分层构建的 Docker 镜像。它评测通用软件工程能力，没有引擎运行时。
+
+**JAMER**（arxiv 2606.19830）从主题关键词生成 Godot 工程，用无头 Godot 测量结构完整性（SCS）和行为对齐度（BAS）。使用 Claude Code 作为 Agent 框架并支持模型切换。指标是连续值，任务类型是生成式，而非修复式。论文发现 Agent 能修复编译错误，但 SCS/BAS 不提升——因为改动停留在语法层面，没有理解游戏逻辑。
+
+**GameCraft-Bench**（arxiv 2606.17861）包含 140 道 Godot 任务，跨 15 个游戏家族，通过重放录制的玩法演示并用多模态 LLM 裁判按 Rubric 打分。最强前沿 Agent 得分约 41.5%。
+
+GameForgeBench 在三个方面有所不同。第一，每道题都是在真实引擎（Unity、Godot、Minecraft、Roblox、C++）已有工程中做修复，而非生成式或纯函数任务。第二，奖励完全由特定任务的运行时行为决定，由确定性原生探针验证——文件存在和工程解析只是辅助门控，单独通过它们不能得到满分奖励。第三，评分设计明确：所有必需行为检查全部通过则主奖励为 1，否则为 0；可选的诊断分数（passed\_checks / total\_checks）仅用于事后分析，不替代主奖励，评分路径中不使用 LLM 裁判。
+
+当前 Harbor 0.22.0 staging 题包是 [`release/gameforgebench-harbor-0.22.0-staging-v6.zip`](release/gameforgebench-harbor-0.22.0-staging-v6.zip)。其中只放入已经有 Linux amd64 Harbor oracle/no-op 控制证据的 3 道题，并包含 digest 锁定的 `dataset.toml`、包校验和、包内审计和控制证据；其余 78 道在当前 Docker/Harbor 控制完成前不会被伪装成可发布题目。
 
 ## 已校准任务
 
