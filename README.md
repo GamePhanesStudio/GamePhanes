@@ -16,29 +16,45 @@ instruction -> inspect -> edit -> run -> observe -> diagnose -> repair -> verify
 
 The benchmark target is a coding agent, not a player bot. Evaluator-controlled probes provide runtime evidence; the agent is judged on engineering work, debugging, behavior, and regression resistance.
 
+## How It Differs From Related Benchmarks
+
+**SWE-bench** treats a resolved GitHub issue as the task and checks whether the repo's existing test suite passes after the patch. The reward is binary and the environment is a layered Docker image built from the original repo. It tests general software engineering but has no engine runtime.
+
+**JAMER** (arxiv 2606.19830) generates Godot projects from theme keywords and measures structural completeness (SCS) and behavioral alignment (BAS) using headless Godot runs. It uses Claude Code as the agent harness with model-swapping. Its metrics are continuous rather than binary and the tasks are generative rather than repair.
+
+**GameCraft-Bench** (arxiv 2606.17861) covers 140 Godot tasks across 15 game families and judges agent output by replaying recorded gameplay through a multimodal LLM rubric judge. The top frontier agent reached 41.5% on its scale.
+
+GameForgeBench differs on three points. First, every task is an existing-project repair inside a real engine (Unity, Godot, Minecraft, Roblox, C++), not a generative or pure-function task. Second, the reward is determined solely by task-specific runtime behavior checked by a deterministic native probe — file presence and project parse are supporting gates only and cannot produce a passing reward on their own. Third, the scoring design is explicit: binary reward (1 when all required behavior checks pass, 0 otherwise) plus an optional post-hoc diagnostic score, with no LLM judge in the scoring path.
+
 ## Open Release
 
-The release corpus contains **81 completed executable tasks** spanning Godot, Unity, Roblox, Minecraft, Unreal, Web, and generic engine projects. The tasks cover gameplay systems, engine/runtime work, UI and interaction, plugins, persistence, callbacks, build workflows, and delivery quality.
+The corpus contains **81 normalized executable candidates** spanning Godot, Unity, Roblox, Minecraft, Unreal, Web, and generic engine projects. Tasks are released in batches as their Docker verifiers and oracle/no-op controls are hardened for public use. More tasks are coming soon.
 
-Each task is a self-contained contract with a starter project, a natural-language request, a reproducible environment, protected files, a reference solution, and executable acceptance checks. The public upload includes one representative task so the complete workflow can be inspected without downloading the full corpus.
+Each task is a self-contained contract with a starter project, a natural-language request, a reproducible environment, protected files, a reference solution, and executable acceptance checks.
 
-## Featured Task
+## Released Tasks
 
-| Task | Role | Runtime acceptance boundary |
+| Task | Engine | What it tests |
 |---|---|---|
-| [`godot-battle-status-bars-gloss`](release/tasks/godot-battle-status-bars-gloss/) | Reference task | Replace flat HP/MP fills with glossy native textures; preserve layout, bounded ratios, and lifecycle behavior. |
+| [`godot-battle-status-bars-gloss`](release/tasks/godot-battle-status-bars-gloss/) | Godot | Replace flat HP/MP fills with glossy textures; bounded ratios, idempotent updates, lifecycle reload |
+| [`godot-night-zone-controller`](release/tasks/godot-night-zone-controller/) | Godot | NightZone state: landmarks, armed weapons, AI path-cost multiplier, snapshot isolation |
+| [`godot-replay-orbit-camera`](release/tasks/godot-replay-orbit-camera/) | Godot | Fix orbit camera drag direction; make rotation sensitivity DPI-independent |
+| [`godot-replay-minimap-capture`](release/tasks/godot-replay-minimap-capture/) | Godot | Attach minimap to independent CanvasLayer; suppress screenshot-only elements during capture |
+| [`godot-vehicle-effects`](release/tasks/godot-vehicle-effects/) | Godot | Smooth vehicle stopping, horizontal launcher camera follow, continuous rocket smoke trail |
+| [`godot-endless-chunks`](release/tasks/godot-endless-chunks/) | Godot | Deterministic endless chunk generation with spike hazards and gated entity unlocks |
+| [`godot-pixel-movement`](release/tasks/godot-pixel-movement/) | Godot | Native player input, wall collision, window configuration, HUD synchronization |
+| [`godot-grenade-projectile`](release/tasks/godot-grenade-projectile/) | Godot | Grenade projectile, burn-pool validation, smoke extinguish lifecycle |
+| [`godot-inksans-combat`](release/tasks/godot-inksans-combat/) | Godot | InkSans combat state: HP signals, death gating, reset idempotency, scene isolation |
+| [`godot-scene-run-manager`](release/tasks/godot-scene-run-manager/) | Godot | PackedScene execution gating, crash-lock recovery, isolated runtime snapshots |
+| [`minecraft-paper-chair`](release/tasks/minecraft-paper-chair/) | Paper 1.20.4 | Chair plugin: seat collision and repeated interaction behavior on a live server |
+| [`minecraft-paper-corgi`](release/tasks/minecraft-paper-corgi/) | Paper 1.20.4 | Native entities, park furniture, server-authoritative interaction state |
+| [`minecraft-paper-kaucja`](release/tasks/minecraft-paper-kaucja/) | Paper 1.20.4 | Native entity model, texture, and animation lifecycle |
+| [`minecraft-paper-settings-i18n`](release/tasks/minecraft-paper-settings-i18n/) | Paper 1.20.4 | Locale-aware settings inventory with en_us/ru_ru switching backed by property files |
+| [`cpp-shadow-map-pass`](release/tasks/cpp-shadow-map-pass/) | C++ | Implement a shadow-map pass in a C++ game-engine scene and graphics runtime |
+| [`cpp-ball-prediction`](release/tasks/cpp-ball-prediction/) | C++ | Ball–ball prediction: spin transfer and overlap separation to prevent post-shot drift |
+| [`html5-cyberpunk-engine`](release/tasks/html5-cyberpunk-engine/) | HTML5 | Cyberpunk game engine state transitions, enemy waves, and boss registry |
 
-The task starts with a compact Godot battle HUD whose HP and MP fills disappear into the background. The requested change sounds visual, but the acceptance boundary is engineering-focused:
-
-- native `TextureRect` nodes and canonical resource bindings;
-- fixed 62x6 geometry with unchanged tracks;
-- independent HP/MP ratio transitions;
-- clamping for negative, over-max, and non-positive values;
-- idempotent repeated updates;
-- second-instance lifecycle reload;
-- measurable texture highlight, shadow, and color contrast.
-
-The directory contains the starter project, instruction, rubric, native probe, Docker verifier, redacted provenance record, and reference solution.
+More tasks covering Unity, Roblox Luau, Unreal, and additional Godot and Minecraft scenarios are coming soon.
 
 ## Task Format
 
@@ -68,6 +84,14 @@ task-name/
 
 Tasks must not depend on a contributor's local absolute path, private package registry, undisclosed asset, network download at evaluation time, or interactive GUI step.
 
+To audit the open-source package layout and current Harbor controls:
+
+```bash
+python3 scripts/audit_harbor_022_reproducibility.py
+```
+
+Only tasks with a current Harbor 0.22.0 oracle/no-op run record are counted as reproducible.
+
 ## How To Run The Example
 
 Requires Godot 4.6.1 for local inspection and Docker for the hermetic verifier.
@@ -89,6 +113,8 @@ GameForgeBench separates four layers of evidence:
 4. **Diagnostics**: invariant-level results explaining the outcome.
 
 This separation distinguishes a plausible file edit from a project that actually behaves correctly when the engine runs it.
+
+The scoring design is explicit and simple: each check is binary (pass or fail), and the primary Harbor task reward is 1 only when all required checks pass, otherwise 0. An optional post-hoc diagnostic score in [0, 1] can be computed from `passed_checks / total_checks` for near-miss analysis, but it is never substituted for the primary reward. File presence and project parse checks are supporting gates only — a passing reward cannot be obtained from them alone.
 
 ## Task Quality Bar
 
