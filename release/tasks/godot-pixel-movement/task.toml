@@ -1,0 +1,33 @@
+schema_version = "1.1"
+engine = "godot"
+artifacts = [
+    "/app/Main.tscn",
+    "/app/project.godot",
+    "/app/scripts/",
+]
+
+[task]
+name = "gameforgebench/gameforgebench-068-019fa7da-2f08-76d3-8475-df4226fa06d4"
+description = "Repair native Godot player input, wall collision, window configuration and HUD synchronization."
+
+[metadata]
+difficulty = "unknown"
+category = "game-development"
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240
+
+[verifier.environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240

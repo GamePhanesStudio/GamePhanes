@@ -1,0 +1,35 @@
+name: godot-pixel-player-collision
+description: Repair native Godot player input, wall collision, window configuration
+  and HUD synchronization.
+runtime_adapter: godot
+real_behavior_contract:
+  starter_object: Main.tscn Godot scene with CharacterBody2D Player, StaticBody2D
+    Wall/Floor colliders, Camera2D and CanvasLayer HUD
+  multi_step_events:
+  - instantiate scene -> press move_right -> process physics frames -> inspect Player
+    position and HUD
+  - continue right into Wall -> release input -> reset_player -> reset_player again
+    -> shrink viewport -> inspect HUD
+  state_transition: Player moves from spawn under WASD input, then remains outside
+    the wall after collision, and reset restores spawn with zero velocity
+  boundary_behavior: diagonal input is normalized, repeated wall contact does not
+    tunnel, repeated reset is idempotent, and HUD remains present in a small viewport
+  observation: Godot headless probe injects InputMap events and physics frames, observes
+    CharacterBody2D collision state, scene nodes, project viewport settings, and rendered
+    HUD labels
+  runtime_adapter: godot
+deliverables:
+- Main.tscn
+- project.godot
+- scripts/player.gd
+- scripts/main.gd
+validation:
+- Godot parses headlessly
+- hidden native movement probe passes
+version: 3
+authoring:
+  schema_version: gameforgebench.authoring-pass.v1
+  contract_fingerprint: ddc195783d7fab31c6ce83f544d45413b4c6d00c927da54509d6020eba5b7bed
+  contract_status: task_specific_runtime_contract
+  controls_status: pending_after_authoring_change
+  source: canonical status.tsv row

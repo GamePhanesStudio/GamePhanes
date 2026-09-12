@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource path="res://scripts/orbit_camera.gd" type="Script" id="1"]
+
+[node name="Main" type="Node3D"]
+
+[node name="ReplayCamera" type="Camera3D" parent="."]
+script = ExtResource("1")
+current = true

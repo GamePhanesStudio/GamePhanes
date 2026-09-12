@@ -1,0 +1,42 @@
+{
+    "id": "a671510c-775b-4a13-b529-6209abfcbc2c",
+    "started_at": "2026-09-10T13:52:28.491870",
+    "updated_at": "2026-09-10T14:00:21.146840",
+    "finished_at": "2026-09-10T14:00:21.146840",
+    "n_total_trials": 2,
+    "stats": {
+        "n_completed_trials": 2,
+        "n_errored_trials": 0,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "terminus-2__deepseek-v4-flash__adhoc": {
+                "n_trials": 2,
+                "n_errors": 0,
+                "metrics": [
+                    {
+                        "mean": 1.0
+                    }
+                ],
+                "pass_at_k": {
+                    "2": 1.0
+                },
+                "reward_stats": {
+                    "reward": {
+                        "1.0": [
+                            "gameforgebench-077-sess_msljrqk7__p6hiNAx",
+                            "gameforgebench-077-sess_msljrqk7__Xu66VN4"
+                        ]
+                    }
+                },
+                "exception_stats": {}
+            }
+        },
+        "n_input_tokens": 127972,
+        "n_cache_tokens": 83712,
+        "n_output_tokens": 15951,
+        "cost_usd": null
+    }
+}

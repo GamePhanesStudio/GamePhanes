@@ -1,0 +1,34 @@
+name: neon-rift-cyberpunk
+version: 10
+description: Implement the executable HTML5 cyberpunk game engine, state transitions,
+  enemy waves, and boss registry.
+engine: web
+runtime_adapter: web
+real_behavior_contract:
+  starter_object: index.html HTML5 game scene with engine.js requestAnimationFrame
+    loop, game.js enemy registry and state.js runtime state
+  multi_step_events:
+  - load the browser modules and create a NeonRift game
+  - advance 30 fixed updates to spawn an enemy wave, then draw the game to a real
+    canvas
+  - apply damage and reject an unknown state event without mutation
+  state_transition: fixed updates create enemies, the damage event reduces HP, and
+    the game draw changes canvas pixels
+  boundary_behavior: unknown events do not mutate state, registries retain at least
+    four enemy and three boss types, and a missing canvas context is not accepted
+  observation: Chromium headless executes the browser runtime, observes canvas pixels
+    after CyberEngine drawing, and reads the DOM probe result
+  runtime_adapter: web
+deliverables:
+- index.html
+- src/engine.js
+- src/game.js
+- src/state.js
+entrypoint: index.html
+verification_command: python -m pytest tests/test_outputs.py -q
+authoring:
+  schema_version: gameforgebench.authoring-pass.v1
+  contract_fingerprint: 36624d65e6c6d5806cea980a3180b7334850dff868af400379dd48d748b1af95
+  contract_status: task_specific_runtime_contract
+  controls_status: pending_after_authoring_change
+  source: canonical status.tsv row

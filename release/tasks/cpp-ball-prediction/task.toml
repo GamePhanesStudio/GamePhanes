@@ -1,0 +1,31 @@
+schema_version = "1.1"
+engine = "cpp"
+artifacts = [
+    "/app/src/",
+]
+
+[task]
+name = "gameforgebench/gameforgebench-064-history-c56bcbd28b51ce792b7fa70a50f24867d88a202e"
+description = "Repair the C++ ball-ball prediction response so spin transfer and overlap separation prevent post-shot drift from the predicted line."
+
+[metadata]
+difficulty = "unknown"
+category = "game-development"
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240
+
+[verifier.environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240

@@ -1,0 +1,18 @@
+{
+    "job_name": "2026-09-10__13-52-27",
+    "jobs_dir": "jobs_dvflash77",
+    "n_attempts": 2,
+    "n_concurrent_trials": 1,
+    "quiet": true,
+    "agents": [
+        {
+            "name": "terminus-2",
+            "model_name": "openai/deepseek-v4-flash"
+        }
+    ],
+    "tasks": [
+        {
+            "path": "/Users/jeremy/Documents/ChatGPT/Coding game benchmark/data/gameforgebench-tencent-delivery-v0/tasks/gameforgebench-077-sess_msljrqk7_de5052fa21e2"
+        }
+    ]
+}

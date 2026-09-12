@@ -1,0 +1,192 @@
+version: 3
+real_behavior_contract:
+  starter_object: Main.tscn Godot scene with CharacterBody2D Player, StaticBody2D
+    Wall/Floor colliders, Camera2D and CanvasLayer HUD
+  multi_step_events:
+  - instantiate scene -> press move_right -> process physics frames -> inspect Player
+    position and HUD
+  - continue right into Wall -> release input -> reset_player -> reset_player again
+    -> shrink viewport -> inspect HUD
+  state_transition: Player moves from spawn under WASD input, then remains outside
+    the wall after collision, and reset restores spawn with zero velocity
+  boundary_behavior: diagonal input is normalized, repeated wall contact does not
+    tunnel, repeated reset is idempotent, and HUD remains present in a small viewport
+  observation: Godot headless probe injects InputMap events and physics frames, observes
+    CharacterBody2D collision state, scene nodes, project viewport settings, and rendered
+    HUD labels
+  runtime_adapter: godot
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  task_specificity: unique_runtime_contract
+  task_contract:
+    goal: Repair the Godot 4 Pixel Tower scene so the existing CharacterBody2D Player
+      responds to move_left, move_right, move_up, and move_down, moves through collision
+      solving without penetrating the Wall and Floor StaticBody2D nodes, resets to
+      its scene start position with zero velocity, and keeps the HUD visible and synchronized.
+    starter_object: Main.tscn with CharacterBody2D Player, StaticBody2D Wall/Floor,
+      Camera2D, and CanvasLayer HUD
+    event_sequence:
+    - instantiate Main.tscn
+    - press move_right and advance physics frames
+    - press move_down while moving right and then release both actions
+    - press move_right repeatedly until contacting Wall
+    - release move_right
+    - call reset_player
+    - call reset_player again
+    - resize the root viewport to 320x180
+    - inspect HUD/Panel/VBox/PositionLabel and HUD/Panel/VBox/StatusLabel
+    state_transition: Movement changes Player.global_position; collision prevents
+      penetration into Wall; reset_player restores the initial Player position and
+      clears velocity; repeated reset_player calls remain at the same position.
+    boundary_behavior: Combined movement must remain within the configured speed,
+      repeated rightward input must leave Player before Wall, and the HUD panel must
+      remain inside the 320x180 viewport.
+    runtime_observation: The Godot headless probe observes Player.global_position,
+      Player.velocity, Player.last_input, Wall.global_position, reset results, PositionLabel
+      text, StatusLabel visibility, and the HUD panel rectangle.
+    runtime_adapter: godot
+  checks:
+  - id: movement_probe
+    mode: godot_probe
+    weight: 1.0
+    dimensions:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    rationale: The supplied native probe loads Main.tscn, instantiates the scene,
+      verifies rightward movement, checks combined-input velocity length, checks released
+      input through last_input, verifies the player remains before Wall after sustained
+      rightward input, verifies one and two reset_player calls, and inspects HUD label
+      text, StatusLabel visibility, and panel bounds in a 320x180 viewport.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - movement_probe
+      rationale: The probe verifies that input changes Player position, that released
+        input produces a small last_input value, and that reset_player restores the
+        original position and clears velocity, including a repeated reset.
+    boundary_behavior:
+      required: true
+      check_ids:
+      - movement_probe
+      rationale: The probe verifies a velocity-length limit during combined input,
+        observes sustained rightward movement against Wall, and checks that the resulting
+        Player position remains before the wall. It also checks HUD panel bounds after
+        reducing the viewport.
+    runtime_observation:
+      required: true
+      check_ids:
+      - movement_probe
+      rationale: The probe uses the Godot runtime to observe scene nodes, physics
+        state, reset behavior, HUD label content, StatusLabel visibility, and panel
+        placement.
+  no_op_requirement:
+    required: true
+    rationale: A passing result requires observable runtime movement, collision blocking,
+      reset behavior, and HUD conditions from movement_probe; file presence or textual
+      declarations alone are insufficient.
+  static_checks_role:
+    checks_present:
+    - player_script
+    - movement_api
+    - real_scene_objects
+    - headless_parse
+    role: These existing checks provide supporting evidence that scripts and a CharacterBody2D
+      declaration exist and that the scene parses, but they are not included as behavior
+      checks because the allowed runtime-backed check ID list contains only movement_probe.
+  evidence_basis:
+    runtime_backed_check_ids:
+    - movement_probe
+    probe_evidence:
+    - Main.tscn is loaded and instantiated.
+    - Player is read at game.get_node("Player").
+    - Movement is injected through move_right and move_down.
+    - Player.global_position and Player.velocity are inspected.
+    - Player.last_input is inspected after releasing input.
+    - Wall.global_position and the post-contact Player position are compared.
+    - game.reset_player() is called twice and the resulting position and velocity
+      are inspected.
+    - PositionLabel text and StatusLabel visibility are inspected.
+    - The HUD panel rectangle is checked against a 320x180 viewport.
+  unsupported_claims:
+  - The current probe does not inspect project.godot, so it cannot prove that the
+    configured window viewport is exactly 960x540 or that the window is configured
+    as windowed.
+  - The current probe only checks that PositionLabel.text is non-empty; it does not
+    compare the label contents with the current Player position, so HUD position synchronization
+    is not proven.
+  - The current probe checks one post-contact position before Wall but does not compare
+    positions across multiple subsequent contact frames, so stable position while
+    continuing to hold the direction is not fully proven.
+  - The current probe checks only a combined-input velocity length against 180.5;
+    it does not independently verify horizontal and vertical speed limits against
+    the actual Player speed value.
+  - The current probe does not test collision with Floor; only the Wall is exercised.
+  - The current probe demonstrates movement and blocking behavior but does not prove
+    that the implementation specifically calls Godot's intended collision movement
+    API rather than achieving equivalent behavior through another implementation.
+  - The current probe does not directly verify the visual presence of the Player or
+    preservation of the existing Pixel Tower visual objects.
+  authoring:
+    schema_version: gameforgebench.rubric-authoring.v1
+    contract_fingerprint: ddc195783d7fab31c6ce83f544d45413b4c6d00c927da54509d6020eba5b7bed
+    task_name: godot-pixel-player-collision
+    dimensions_in_rubric:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    controls_required_before_release: true
+  acceptance_mode: runtime_behavior
+  re_authoring_required: false
+  re_authoring_reason: null
+checks:
+- id: player_script
+  type: file_exists
+  path: scripts/player.gd
+  description: player controller exists
+- id: movement_api
+  type: file_contains
+  path: scripts/player.gd
+  expected: func reset_player
+  description: reset API exists
+- id: real_scene_objects
+  type: file_contains
+  path: Main.tscn
+  expected: type="CharacterBody2D"
+  description: starter keeps a native CharacterBody2D
+- id: headless_parse
+  type: command
+  command: godot --headless --path . --editor --quit
+  expected: exit_code=0
+  description: Godot project parses headlessly
+  path: Main.tscn
+- id: movement_probe
+  type: godot_probe
+  probe_script: "extends SceneTree\nfunc _initialize() -> void:\n    var packed = load(\"\
+    res://Main.tscn\")\n    if packed == null: quit(1); return\n    var game = packed.instantiate()\n\
+    \    root.add_child(game)\n    await process_frame\n    var player = game.get_node(\"\
+    Player\")\n    var hud = game.get_node(\"HUD/Panel/VBox\")\n    var start: Vector2\
+    \ = player.global_position\n    Input.action_press(\"move_right\")\n    for i\
+    \ in range(12):\n        await physics_frame\n    var moved: Vector2 = player.global_position\n\
+    \    if moved.x <= start.x + 8.0: quit(1); return\n    if player.velocity.length()\
+    \ > 180.5: quit(1); return\n    Input.action_press(\"move_down\")\n    for i in\
+    \ range(12):\n        await physics_frame\n    Input.action_release(\"move_down\"\
+    )\n    Input.action_release(\"move_right\")\n    if player.last_input.length()\
+    \ > 1.01: quit(1); return\n    var wall_x := float(game.get_node(\"Wall\").global_position.x)\n\
+    \    Input.action_press(\"move_right\")\n    for i in range(45):\n        await\
+    \ physics_frame\n    Input.action_release(\"move_right\")\n    var blocked: Vector2\
+    \ = player.global_position\n    if blocked.x >= wall_x - 10.0: quit(1); return\n\
+    \    game.reset_player()\n    await physics_frame\n    var reset_pos: Vector2\
+    \ = player.global_position\n    if reset_pos.distance_to(start) > 0.1 or player.velocity.length()\
+    \ > 0.1: quit(1); return\n    game.reset_player()\n    if player.global_position.distance_to(start)\
+    \ > 0.1: quit(1); return\n    get_root().size = Vector2i(320, 180)\n    await\
+    \ process_frame\n    var panel_rect: Rect2 = game.get_node(\"HUD/Panel\").get_global_rect()\n\
+    \    var label_text := str(hud.get_node(\"PositionLabel\").text)\n    if label_text.is_empty()\
+    \ or not hud.get_node(\"StatusLabel\").visible: quit(1); return\n    if panel_rect.position.x\
+    \ < 0.0 or panel_rect.position.y < 0.0 or panel_rect.end.x > 320.0 or panel_rect.end.y\
+    \ > 180.0: quit(1); return\n    print(\"PIXEL_MOVEMENT_PROBE_OK\"); quit(0)"
+  expected: PIXEL_MOVEMENT_PROBE_OK
+  description: native movement, collision, reset and HUD behavior pass
+  path: Main.tscn
+  timeout: 90

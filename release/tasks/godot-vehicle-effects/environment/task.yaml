@@ -1,0 +1,30 @@
+name: godot-vehicle-braking-camera-and-rocket-smoke
+description: Implement smooth vehicle stopping, horizontal launcher camera follow
+  and a continuous rocket smoke trail.
+runtime_adapter: godot
+real_behavior_contract:
+  starter_object: Main.tscn Godot scene with VehicleEffects vehicle braking, launcher
+    camera and rocket smoke component
+  multi_step_events:
+  - instantiate effects -> decelerate a moving vehicle over multiple deltas
+  - compute launcher follow -> sample a rocket smoke path -> reject invalid parameters
+  state_transition: vehicle speed decreases toward zero and smoke samples advance
+    along the rocket trajectory
+  boundary_behavior: deceleration cannot reverse speed; vertical camera offset stays
+    zero; invalid smoke inputs return empty
+  observation: Godot headless probe observes native scene startup and VehicleEffects
+    runtime vectors/arrays
+  runtime_adapter: godot
+deliverables:
+- Main.tscn
+- scripts/vehicle_effects.gd
+validation:
+- Godot parses headlessly
+- hidden state probes pass
+version: 3
+authoring:
+  schema_version: gameforgebench.authoring-pass.v1
+  contract_fingerprint: 201585fa962edf7e8112fbea55c88f9c03bbe1bef7c6c50059ad8554c715404a
+  contract_status: task_specific_runtime_contract
+  controls_status: pending_after_authoring_change
+  source: canonical status.tsv row

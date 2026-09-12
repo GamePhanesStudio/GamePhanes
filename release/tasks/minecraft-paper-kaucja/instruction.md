@@ -1,0 +1,7 @@
+Implement the entity visual-state pipeline in `src/main/java/com/gameforge/kaucja/KaucjaPlugin.java`. Every method currently returns a failure value.
+
+The plugin follows a start/stop lifecycle — starting transitions it from stopped to running the first time, and repeated starts before a reset return failure. Once running, spawning an entity places an armor stand near a given player, registers it under a string identifier, and attaches the appropriate scoreboard tags and model name to its persistent data. It should reject null players, blank or duplicate identifiers, and calls made while stopped.
+
+After spawning, applying a texture stores a texture string on the entity's persistent data — rejecting null, blank, or strings over 96 characters. Playing an animation stores an animation name and applies a native pose; only idle, walk, and turn are accepted, and turn must visibly rotate the head. A state snapshot returns a colon-separated `model:texture:animation` string for a registered entity, or `"missing"` for unknown ones. Resetting removes all registered stands from the world, clears the registry, and resets the running flag.
+
+Submit only `src/main/java/com/gameforge/kaucja/KaucjaPlugin.java`.

@@ -1,0 +1,34 @@
+schema_version = "1.1"
+engine = "godot"
+artifacts = [
+    "/app/Main.tscn",
+    "/app/project.godot",
+    "/app/scripts/",
+]
+
+[task]
+name = "gameforgebench/gameforgebench-079-sess-mslof61e-9c785355ab16"
+description = "Implement the InkSansState combat-state slice for the Ink!sans Fight Godot port, with HP signals, death gating, reset idempotency, and scene isolation."
+
+[metadata]
+difficulty = "medium"
+category = "game-development"
+tags = ["godot", "gdscript", "game-state", "combat", "signals", "scene"]
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+build_timeout_sec = 1800.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240
+
+[verifier.environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240

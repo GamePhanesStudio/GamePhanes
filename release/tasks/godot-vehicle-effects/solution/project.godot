@@ -1,0 +1,11 @@
+[application]
+config/name="Godot Vehicle Braking Camera and Rocket Smoke"
+run/main_scene="res://Main.tscn"
+
+[display]
+window/size/viewport_width=640
+window/size/viewport_height=360
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

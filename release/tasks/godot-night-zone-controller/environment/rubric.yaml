@@ -1,0 +1,163 @@
+version: 5
+real_behavior_contract:
+  starter_object: Main.tscn NightZone Node2D with Landmark, Weapon, EnemySpawner,
+    and NavigationRegion engine anchors
+  multi_step_events:
+  - configure -> spawn wave 1 -> spawn wave 3 -> path cost -> duplicate/invalid events
+  state_transition: night mode and tuning values change from defaults; wave 3 enemy
+    health exceeds wave 1
+  boundary_behavior: duplicate configuration ID, invalid wave, and negative path input
+    do not mutate state; snapshot is isolated
+  observation: native Godot headless probe observes scene nodes and runtime dictionaries
+  runtime_adapter: godot
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  task_specificity: unique_runtime_contract
+  task_contract:
+    goal: Implement a runnable Godot night-zone slice in Main.tscn and scripts/night_zone.gd
+      with Landmark, Weapon, EnemySpawner, and NavigationRegion anchors; configure
+      night mode with at least two landmarks and a damaging weapon; spawn enemies
+      whose health and speed grow with wave; apply a navigation path-cost optimization
+      multiplier; expose configure, spawn, and path_cost through handle_event(event_name,
+      payload); reject duplicate or invalid events; and return an isolated snapshot.
+    starter_object: Main.tscn NightZone Node2D with Landmark, Weapon, EnemySpawner,
+      and NavigationRegion engine anchors.
+    event_sequence:
+    - Instantiate Main.tscn and add the scene instance to the runtime tree.
+    - Reset the zone with reset_for_test().
+    - 'Call handle_event("configure", {"event_id": "configure-1"}).'
+    - 'Call handle_event("spawn", {"wave": 1, "event_id": "wave-1"}).'
+    - 'Call handle_event("spawn", {"wave": 3, "event_id": "wave-3"}).'
+    - Compare spawn_enemy(1) and spawn_enemy(3) native enemy dictionaries.
+    - 'Call handle_event("path_cost", {"base": 10.0, "event_id": "path-1"}).'
+    - 'Call handle_event("configure", {"event_id": "configure-1"}) again and reject
+      the duplicate event ID.'
+    - 'Call handle_event("spawn", {"wave": 0, "event_id": "bad-wave"}) and reject
+      the invalid wave.'
+    - 'Call handle_event("path_cost", {"base": -1.0, "event_id": "bad-path"}) and
+      reject the invalid path input.'
+    - Mutate the result of snapshot() and verify that a fresh snapshot retains the
+      original landmarks and weapon damage.
+    state_transition: night_mode and configured path-cost tuning transition from defaults
+      after the configure and path_cost events; a later wave has greater enemy health
+      than wave 1.
+    boundary_behavior: A repeated event_id is rejected; wave zero and negative path
+      input are rejected; mutating the dictionary returned by snapshot() does not
+      alter internal landmarks or weapon data.
+    runtime_observation: The Godot headless runtime loads and instantiates Main.tscn,
+      observes night_mode, landmarks, weapons, enemy dictionaries, path-cost results,
+      event rejection, and snapshot isolation.
+    runtime_adapter: godot
+  checks:
+  - id: night_zone_runtime
+    mode: runtime
+    weight: 1.0
+    dimensions:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    rationale: The supplied Godot probe verifies scene loading and instantiation,
+      configure-driven night mode, at least two landmarks, a weapon with positive
+      damage, larger health at wave 3 than wave 1, optimized path cost, duplicate
+      configure rejection, invalid wave and path rejection, and snapshot isolation.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - night_zone_runtime
+    boundary_behavior:
+      required: true
+      check_ids:
+      - night_zone_runtime
+    runtime_observation:
+      required: true
+      check_ids:
+      - night_zone_runtime
+  no_op_requirement: The submission must modify the runnable Godot implementation
+    rather than substitute a design document; it must provide behavior observable
+    through Main.tscn and scripts/night_zone.gd.
+  static_checks_role: 'Static checks provide only supplementary evidence: zone_project_parse
+    verifies headless project parsing, night_scene_binding verifies that Main.tscn
+    contains the text Landmark, and protected_workspace verifies workspace integrity.
+    They do not independently establish the full runtime contract.'
+  evidence_basis:
+  - The supplied night_zone_runtime probe is the executable evidence for configure,
+    spawn, path_cost, event rejection, enemy health growth, and snapshot isolation.
+  - The supplied zone_project_parse check is executable evidence that the Godot project
+    parses headlessly.
+  - The supplied night_scene_binding check only searches Main.tscn for Landmark.
+  - No supplied executable check directly verifies EnemySpawner or NavigationRegion
+    anchors.
+  - No supplied executable check verifies enemy speed growth across waves.
+  - No supplied executable check verifies that all required native anchor types are
+    present in the instantiated scene.
+  unsupported_claims:
+  - Enemy speed growth with wave is required by the task but is not checked by the
+    current runtime probe, which compares only the health field.
+  - The presence and runtime use of EnemySpawner and NavigationRegion anchors are
+    not established by the current checks; the static scene check only searches for
+    Landmark.
+  - The complete requirement that Main.tscn retain Landmark, Weapon, EnemySpawner,
+    and NavigationRegion anchors is not fully backed by the current executable evidence.
+  - The probe verifies path_cost(10.0) is lower than 10.0 after configuration, but
+    does not verify a specific navigation optimization multiplier or its application
+    to a NavigationRegion.
+  authoring:
+    schema_version: gameforgebench.rubric-authoring.v1
+    contract_fingerprint: 95e5ce2c794e81bd7f471b4ec1b633c8de8ae01c8513bb9eed59ab4e3d114e5f
+    task_name: godot-abandoned-zone-night-optimization
+    dimensions_in_rubric:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    controls_required_before_release: true
+  acceptance_mode: runtime_behavior
+  re_authoring_required: false
+  re_authoring_reason: null
+checks:
+- id: zone_project_parse
+  type: command
+  command: godot --headless --path . --editor --quit
+  expected: exit_code=0
+  description: Godot project parses headlessly
+  path: project.godot
+- id: night_scene_binding
+  type: file_contains
+  path: Main.tscn
+  expected: Landmark
+  description: scene contains native NightZone anchors
+- id: protected_workspace
+  type: integrity_probe
+  path: Main.tscn
+  description: image-owned project and allowed file set are preserved
+- id: night_zone_runtime
+  type: godot_probe
+  probe_script: "extends SceneTree\nfunc _initialize() -> void:\n    var scene = load(\"\
+    res://Main.tscn\")\n    if scene == null: quit(1); return\n    var zone = scene.instantiate()\n\
+    \    root.add_child(zone)\n    zone.reset_for_test()\n\
+    \    if zone.handle_event(\"configure\", {\"event_id\": \"configure-1\"}) != true:\
+    \ quit(1); return\n    if not zone.night_mode or zone.landmarks.size() < 2 or\
+    \ zone.weapons.is_empty(): quit(1); return\n    var has_damage := false\n    for\
+    \ weapon in zone.weapons.values():\n        if weapon is Dictionary and float(weapon.get(\"\
+    damage\", 0.0)) > 0.0: has_damage = true\n    if not has_damage: quit(1); return\n\
+    \    if zone.handle_event(\"spawn\", {\"wave\": 1, \"event_id\": \"wave-1\"})\
+    \ != true: quit(1); return\n    if zone.handle_event(\"spawn\", {\"wave\": 3,\
+    \ \"event_id\": \"wave-3\"}) != true: quit(1); return\n    var first: Dictionary\
+    \ = zone.spawn_enemy(1)\n    var later: Dictionary = zone.spawn_enemy(3)\n   \
+    \ if float(later[\"health\"]) <= float(first[\"health\"]): quit(1); return\n \
+    \   if zone.handle_event(\"path_cost\", {\"base\": 10.0, \"event_id\": \"path-1\"\
+    }) != true: quit(1); return\n    if zone.path_cost(10.0) >= 10.0: quit(1); return\n\
+    \    if zone.handle_event(\"configure\", {\"event_id\": \"configure-1\"}) != false:\
+    \ quit(1); return\n    if zone.handle_event(\"spawn\", {\"wave\": 0, \"event_id\"\
+    : \"bad-wave\"}) != false: quit(1); return\n    if zone.handle_event(\"path_cost\"\
+    , {\"base\": -1.0, \"event_id\": \"bad-path\"}) != false: quit(1); return\n  \
+    \  var copy: Dictionary = zone.snapshot()\n    copy[\"landmarks\"] = []\n    copy[\"\
+    weapons\"][\"silenced_carbine\"][\"damage\"] = 0.0\n    var fresh: Dictionary\
+    \ = zone.snapshot()\n    if (fresh.get(\"landmarks\", []) as Array).is_empty():\
+    \ quit(1); return\n    if float((fresh.get(\"weapons\", {}) as Dictionary).get(\"\
+    silenced_carbine\", {}).get(\"damage\", 0.0)) <= 0.0: quit(1); return\n    zone.free()\n\
+    \    print(\"NIGHT_ZONE_RUNTIME_OK\")\n    quit(0)\n"
+  expected: NIGHT_ZONE_RUNTIME_OK
+  description: native multi-step runtime, boundaries, and snapshot isolation
+  path: Main.tscn
+  timeout: 30
