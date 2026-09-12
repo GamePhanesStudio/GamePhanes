@@ -1,493 +1,0 @@
-[?2004hroot@e7274b02129c:/app# asciinema rec --stdin /logs/agent/recording.cast
-[?2004l[0;32masciinema: recording asciicast to /logs/agent/recording.cast[0m
-[0;32masciinema: press <ctrl-d> or type "exit" when you're done[0m
-[?2004hroot@e7274b02129c:/app# clear
-[?2004l[H[J[3J[?2004hroot@e7274b02129c:/app# ls -la
-[?2004ltotal 28
-drwxr-xr-x 1 root root 4096 Sep 10 05:50 [0m[01;34m.[0m
-drwxr-xr-x 1 root root 4096 Sep 10 05:53 [01;34m..[0m
--rw-r--r-- 1 root root  314 Sep  7 21:38 Main.tscn
--rw-r--r-- 1 root root  362 Sep  7 21:38 project.godot
--rw-r--r-- 1 root root 6728 Sep  9 15:47 rubric.yaml
-drwxr-xr-x 2 root root 4096 Sep  8 17:10 [01;34mscripts[0m
-[?2004hroot@e7274b02129c:/app# find . -maxdepth 3 -type f | sort
-[?2004l./Main.tscn
-./project.godot
-./rubric.yaml
-./scripts/grenade_physics.gd
-./scripts/main.gd
-[?2004hroot@e7274b02129c:/app# sed -n '1,240p' scripts/grenade_physics.gd
-[?2004lextends Node
-class_name GrenadePhysics
-
-var projectiles: Array[Dictionary] = []
-var burn_pools: Array[Dictionary] = []
-
-func reset_for_reload() -> void:
-    projectiles.clear()
-    burn_pools.clear()
-
-func throw_velocity(speed: float, angle_rad: float) -> Vector2:
-    return Vector2.ZERO
-
-func throw_grenade(speed: float, angle_rad: float) -> Dictionary:
-    return {}
-
-func advance_projectile(projectile: Dictionary, delta: float) -> bool:
-    return false
-
-func spawn_burn_pool(position: Vector2, radius: float, duration: float) -> Dictionary:
-    return {}
-
-func advance_burn_pool(pool: Dictionary, delta: float) -> bool:
-    return false
-
-func smoke_state(elapsed: float, lifetime: float) -> String:
-    return "extinguished"
-[?2004hroot@e7274b02129c:/app# sed -n '1,240p' scripts/main.gd
-[?2004lextends Node2D
-
-@onready var grenade_physics: GrenadePhysics = $GrenadePhysics
-
-func _ready() -> void:
-    queue_redraw()
-
-func preview_throw(speed: float, angle_rad: float) -> Dictionary:
-    return grenade_physics.throw_grenade(speed, angle_rad)
-
-func _draw() -> void:
-    draw_circle(Vector2(320, 180), 18.0, Color("4fd1c5"))
-    draw_line(Vector2(320, 180), Vector2(390, 180), Color("f6ad55"), 3.0)
-[?2004hroot@e7274b02129c:/app# sed -n '1,200p' Main.tscn
-[?2004l[gd_scene load_steps=3 format=3]
-
-[ext_resource path="res://scripts/main.gd" type="Script" id="1"]
-[ext_resource path="res://scripts/grenade_physics.gd" type="Script" id="2"]
-
-[node name="Main" type="Node2D"]
-script = ExtResource("1")
-
-[node name="GrenadePhysics" type="Node" parent="."]
-script = ExtResource("2")
-[?2004hroot@e7274b02129c:/app# sed -n '1,200p' project.godot
-[?2004l[application]
-config/name="Godot Grenade Throw and Smoke Lifecycle"
-run/main_scene="res://Main.tscn"
-
-[display]
-window/size/viewport_width=640
-window/size/viewport_height=360
-window/size/window_width_override=640
-window/size/window_height_override=360
-
-[rendering]
-renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"
-[?2004hroot@e7274b02129c:/app# python3 - <<'PY'
-[?2004l[?2004h> from pathlib import Path
-[?2004l[?2004h> p = Path('scripts/grenade_physics.gd')
-[?2004l[?2004h> s = p.read_text()
-[?2004l[?2004h> s = s.replace('''func throw_velocity(speed: float, angle_rad: float) -> Vector2:\n    return Vector2.ZERO''', '''func throw_velocity(speed: float, angle_rad: float) -> Vector2:\n    if speed <= 0.0:\n        return Vector2.ZERO\n    return Vector2(speed * cos(angle_rad), speed * sin(angle_rad))''')
-[?2004l[?2004h> s = s.replace('''func throw_grenade(speed: float, angle_rad: float) -> Dictionary:\n    return {}''', '''func throw_grenade(speed: float, angle_rad: float) -> Dictionary:\n    if speed <= 0.0:\n        return {}\n    var projectile := {\n        "position": Vector2.ZERO,\n        "velocity": throw_velocity(speed, angle_rad),\n        "active": true\n    }\n    projectiles.append(projectile)\n    return projectile''')
-[?2004l[?2004h> s = s.replace('''func advance_projectile(projectile: Dictionary, delta: float) -> bool:\n    return false''', '''func advance_projectile(projectile: Dictionary, delta: float) -> bool:\n    if delta <= 0.0 or projectile.is_empty():\n        return false\n    projectile["position"] = projectile["position"] + projectile["velocity"] * delta\n    return true''')
-[?2004l[?2004h> s = s.replace('''func spawn_burn_pool(position: Vector2, radius: float, duration: float) -> Dictionary:\n    return {}''', '''func spawn_burn_pool(position: Vector2, radius: float, duration: float) -> Dictionary:\n    if radius <= 0.0 or duration <= 0.0:\n        return {}\n    var pool := {\n        "position": position,\n        "radius": radius,\n        "remaining": duration,\n        "active": true\n    }\n    burn_pools.append(pool)\n    return pool''')
-[?2004l[?2004h> s = s.replace('''func advance_burn_pool(pool: Dictionary, delta: float) -> bool:\n    return false''', '''func advance_burn_pool(pool: Dictionary, delta: float) -> bool:\n    if delta <= 0.0 or pool.is_empty():\n        return false\n    pool["remaining"] = pool["remaining"] - delta\n    if pool["remaining"] <= 0.0:\n        pool["active"] = false\n    return true''')
-[?2004l[?2004h> s = s.replace('''func smoke_state(elapsed: float, lifetime: float) -> String:\n    return "extinguished"''', '''func smoke_state(elapsed: float, lifetime: float) -> String:\n    if elapsed < lifetime:\n        return "active"\n    return "extinguished"''')
-[?2004l[?2004h> p.write_text(s)
-[?2004l[?2004h> PY
-[?2004l[?2004hroot@e7274b02129c:/app# sed -n '1,240p' scripts/grenade_physics.gd
-[?2004lextends Node
-class_name GrenadePhysics
-
-var projectiles: Array[Dictionary] = []
-var burn_pools: Array[Dictionary] = []
-
-func reset_for_reload() -> void:
-    projectiles.clear()
-    burn_pools.clear()
-
-func throw_velocity(speed: float, angle_rad: float) -> Vector2:
-    if speed <= 0.0:
-        return Vector2.ZERO
-    return Vector2(speed * cos(angle_rad), speed * sin(angle_rad))
-
-func throw_grenade(speed: float, angle_rad: float) -> Dictionary:
-    if speed <= 0.0:
-        return {}
-    var projectile := {
-        "position": Vector2.ZERO,
-        "velocity": throw_velocity(speed, angle_rad),
-        "active": true
-    }
-    projectiles.append(projectile)
-    return projectile
-
-func advance_projectile(projectile: Dictionary, delta: float) -> bool:
-    if delta <= 0.0 or projectile.is_empty():
-        return false
-    projectile["position"] = projectile["position"] + projectile["velocity"] * delta
-    return true
-
-func spawn_burn_pool(position: Vector2, radius: float, duration: float) -> Dictionary:
-    if radius <= 0.0 or duration <= 0.0:
-        return {}
-    var pool := {
-        "position": position,
-        "radius": radius,
-        "remaining": duration,
-        "active": true
-    }
-    burn_pools.append(pool)
-    return pool
-
-func advance_burn_pool(pool: Dictionary, delta: float) -> bool:
-    if delta <= 0.0 or pool.is_empty():
-        return false
-    pool["remaining"] = pool["remaining"] - delta
-    if pool["remaining"] <= 0.0:
-        pool["active"] = false
-    return true
-
-func smoke_state(elapsed: float, lifetime: float) -> String:
-    if elapsed < lifetime:
-        return "active"
-    return "extinguished"
-[?2004hroot@e7274b02129c:/app# grep -R "GRENADE_SCENE_PROBE_OK" -n . || true
-[?2004l[35m[K./rubric.yaml[m[K[36m[K:[m[K[32m[K121[m[K[36m[K:[m[K  expected: [01;31m[KGRENADE_SCENE_PROBE_OK[m[K
-[35m[K./rubric.yaml[m[K[36m[K:[m[K[32m[K143[m[K[36m[K:[m[K    \ return\n    print(\"[01;31m[KGRENADE_SCENE_PROBE_OK[m[K\")\n    quit(0)\n"
-[?2004hroot@e7274b02129c:/app# which godot || which godot4 || ls /usr/local/bin | grep -i godot || true
-[?2004l/usr/local/bin/godot
-[?2004hroot@e7274b02129c:/app# sed -n '1,240p' rubric.yaml
-[?2004lversion: 7
-real_behavior_contract:
-  starter_object: Main.tscn Godot scene with a GrenadePhysics Node child that owns
-    projectile, burn-pool, and smoke lifecycle state
-  multi_step_events:
-  - load Main.tscn and obtain the GrenadePhysics child node
-  - create a grenade -> advance it by a fixed delta -> observe its moved position
-  - create a valid burn pool -> advance before and at its duration -> observe active
-    then inactive
-  - try non-positive speed, radius, duration, and delta -> verify no invalid state
-    is created or advanced
-  state_transition: a projectile moves from origin and a burn pool changes active
-    to inactive exactly at its duration; smoke changes active to extinguished at its
-    lifetime
-  boundary_behavior: non-positive speed/radius/duration are rejected and non-positive
-    delta does not advance state
-  observation: Godot headless loads Main.tscn, drives the native GrenadePhysics scene
-    node through ordered calls, and observes its runtime dictionaries
-  runtime_adapter: godot
-behavior_scoring:
-  schema_version: gameforgebench.rubric-behavior.v1
-  task_specificity: unique_runtime_contract
-  task_contract:
-    goal: Implement the native GrenadePhysics node in Main.tscn for validated projectile
-      motion, burn-pool lifecycle, and smoke extinguishing.
-    starter_object: Main.tscn Node2D scene containing a GrenadePhysics child Node
-      and visible preview draw
-    event_sequence:
-    - load PackedScene
-    - get child node
-    - throw and advance projectile
-    - spawn and advance burn pool
-    - test invalid boundaries
-    - inspect smoke state
-    state_transition: projectile position changes by velocity*delta; burn-pool remaining
-      time reaches zero and active becomes false at its duration; smoke reaches extinguished
-      at lifetime
-    boundary_behavior: invalid creation inputs return empty dictionaries, non-positive
-      delta does not mutate state, and a completed pool cannot be advanced again
-    runtime_observation: Godot headless instantiates the actual Main.tscn scene and
-      reads child-node state after a deterministic multi-step sequence
-    runtime_adapter: godot
-  checks:
-  - id: grenade_probe
-    mode: godot_probe
-    weight: 1.0
-    dimensions:
-    - state_transition
-    - boundary_behavior
-    - runtime_observation
-    rationale: The native probe loads Main.tscn, exercises the GrenadePhysics child,
-      and checks projectile motion, pool lifecycle, smoke transition, and invalid-input
-      boundaries.
-  dimensions:
-    state_transition:
-      required: true
-      check_ids:
-      - grenade_probe
-    boundary_behavior:
-      required: true
-      check_ids:
-      - grenade_probe
-    runtime_observation:
-      required: true
-      check_ids:
-      - grenade_probe
-  no_op_requirement: A no-op script or direct function stub fails because the probe
-    requires a loaded scene child, moved projectile position, timed pool deactivation,
-    and smoke transition.
-  static_checks_role: File and parse checks support structure only; grenade_probe
-    is the sole behavior-scoring check.
-  evidence_basis:
-  - The probe loads res://Main.tscn and retrieves its GrenadePhysics child.
-  - The probe checks a legal throw has active state and moves from origin after 0.5
-    seconds.
-  - The probe checks a valid pool is active before duration and inactive at duration
-    with remaining zero.
-  - The probe checks invalid speed/radius/duration return empty dictionaries and non-positive
-    delta preserves state.
-  - The probe checks smoke_state before and at lifetime.
-  authoring:
-    schema_version: gameforgebench.rubric-authoring.v1
-    contract_fingerprint: 7772e5ab892b8b49ca342b4701e305a4a47bafbdb53768c713c00cc5132d4ae1
-    task_name: godot-grenade-throw-and-smoke-lifecycle
-    dimensions_in_rubric:
-    - state_transition
-    - boundary_behavior
-    - runtime_observation
-    controls_required_before_release: true
-  acceptance_mode: runtime_behavior
-  re_authoring_required: false
-  re_authoring_reason: null
-checks:
-- id: scene_exists
-  type: file_exists
-  path: Main.tscn
-  description: Godot grenade scene exists
-- id: grenade_script
-  type: file_exists
-  path: scripts/grenade_physics.gd
-  description: grenade physics node script exists
-- id: throw_api
-  type: file_contains
-  path: scripts/grenade_physics.gd
-  expected: func throw_grenade
-  description: projectile creation API exists
-- id: pool_api
-  type: file_contains
-  path: scripts/grenade_physics.gd
-  expected: func advance_burn_pool
-  description: burn-pool lifecycle API exists
-- id: headless_parse
-  type: command
-  command: godot --headless --path . --editor --quit
-  expected: exit_code=0
-  description: Godot project parses headlessly
-  path: Main.tscn
-- id: grenade_probe
-  type: godot_probe
-  path: Main.tscn
-  expected: GRENADE_SCENE_PROBE_OK
-  timeout: 60
-  probe_script: "extends SceneTree\nfunc _initialize() -> void:\n    var packed := load(\"\
-    res://Main.tscn\") as PackedScene\n    if packed == null: quit(1); return\n  \
-    \  var scene := packed.instantiate()\n    root.add_child(scene)\n    var grenade\
-    \ := scene.get_node(\"GrenadePhysics\") as GrenadePhysics\n    if grenade == null:\
-    \ quit(1); return\n    var projectile: Dictionary = grenade.throw_grenade(10.0,\
-    \ PI * 0.5)\n    if not projectile.get(\"active\", false): quit(1); return\n \
-    \   if not grenade.advance_projectile(projectile, 0.5): quit(1); return\n    var\
-    \ moved: Vector2 = projectile[\"position\"]\n    if absf(moved.x) > 0.001 or absf(moved.y\
-    \ - 5.0) > 0.001: quit(1); return\n    var pool: Dictionary = grenade.spawn_burn_pool(Vector2(2,\
-    \ 3), 4.0, 2.0)\n    if not pool.get(\"active\", false): quit(1); return\n   \
-    \ if not grenade.advance_burn_pool(pool, 0.5) or not pool.get(\"active\", false):\
-    \ quit(1); return\n    if not grenade.advance_burn_pool(pool, 1.5) or pool.get(\"\
-    active\", true) or float(pool.get(\"remaining\", 1.0)) != 0.0: quit(1); return\n\
-    \    if grenade.advance_burn_pool(pool, 0.1): quit(1); return\n    if not grenade.throw_grenade(0.0,\
-    \ 0.0).is_empty(): quit(1); return\n    if not grenade.spawn_burn_pool(Vector2.ZERO,\
-    \ 0.0, 2.0).is_empty(): quit(1); return\n    if not grenade.spawn_burn_pool(Vector2.ZERO,\
-    \ 2.0, 0.0).is_empty(): quit(1); return\n    var stable: Dictionary = grenade.spawn_burn_pool(Vector2.ZERO,\
-    \ 2.0, 1.0)\n    if grenade.advance_burn_pool(stable, 0.0): quit(1); return\n\
-    \    if not stable.get(\"active\", false): quit(1); return\n    if grenade.smoke_state(0.5,\
-    \ 1.0) != \"active\" or grenade.smoke_state(1.0, 1.0) != \"extinguished\": quit(1);\
-    \ return\n    print(\"GRENADE_SCENE_PROBE_OK\")\n    quit(0)\n"
-[?2004hroot@e7274b02129c:/app# godot --headless --path . --editor --quit
-[?2004lGodot Engine v4.6.1.stable.official.14d19694e - https://godotengine.org
-
-cat > /tmp/test_grenade_probe.gd <<'EOF'
-extends SceneTree
-func _initialize() -> void:
-    var packed := load("res://Main.tscn") as PackedScene
-    if packed == null: quit(1); return
-    var scene := packed.instantiate()
-    root.add_child(scene)
-    var grenade := scene.get_node("GrenadePhysics") as GrenadePhysics
-    if grenade == null: quit(1); return
-    var projectile: Dictionary = grenade.throw_grenade(10.0, PI * 0.5)
-    if not projectile.get("active", false): quit(1); return
-    if not grenade.advance_projectile(projectile, 0.5): quit(1); return
-    var moved: Vector2 = projectile["position"]
-    if absf(moved.x) > 0.001 or absf(moved.y - 5.0) > 0.001: quit(1); return
-    var pool: Dictionary = grenade.spawn_burn_pool(Vector2(2, 3), 4.0, 2.0)
-    if not pool.get("active", false): quit(1); return
-    if not grenade.advance_burn_pool(pool, 0.5) or not pool.get("active", false): quit(1); return
-    if not grenade.advance_burn_pool(pool, 1.5) or pool.get("active", true) or float(pool.get("remaining", 1.0)) != 0.0: quit(1); return
-    if grenade.advance_burn_pool(pool, 0.1): quit(1); return
-    if not grenade.throw_grenade(0.0, 0.0).is_empty(): quit(1); return
-    if not grenade.spawn_burn_pool(Vector2.ZERO, 0.0, 2.0).is_empty(): quit(1); return
-    if not grenade.spawn_burn_pool(Vector2.ZERO, 2.0, 0.0).is_empty(): quit(1); return
-    var stable: Dictionary = grenade.spawn_burn_pool(Vector2.ZERO, 2.0, 1.0)
-    if grenade.advance_burn_pool(stable, 0.0): quit(1); return
-    if not stable.get("active", false): quit(1); return
-    if grenade.smoke_state(0.5, 1.0) != "active" or grenade.smoke_state(1.0, 1.0) != "extinguished": quit(1); return
-    print("GRENADE_SCENE_PROBE_OK")
-    quit(0)
-EOF
-godot --headless --path . --script /tmp/test_grenade_probe.gd
-[   0% ] [90m[1mfirst_scan_filesystem[22m | Started Project initialization (5 steps)[39m[0m
-[   0% ] [90m[1mfirst_scan_filesystem[22m | Scanning file structure...[39m[0m
-[  16% ] [90m[1mfirst_scan_filesystem[22m | Loading global class names...[39m[0m
-[  33% ] [90m[1mfirst_scan_filesystem[22m | Verifying GDExtensions...[39m[0m
-[  50% ] [90m[1mfirst_scan_filesystem[22m | Creating autoload scripts...[39m[0m
-[  66% ] [90m[1mfirst_scan_filesystem[22m | Initializing plugins...[39m[0m
-[  83% ] [90m[1mfirst_scan_filesystem[22m | Starting file scan...[39m[0m
-[92m[ DONE ][39m [1mfirst_scan_filesystem[22m
-[0m
-[   0% ] [90m[1mupdate_scripts_classes[22m | Started Registering global classes... (2 steps)[39m[0m
-[   0% ] [90m[1mupdate_scripts_classes[22m | GrenadePhysics[39m[0m
-[  33% ] [90m[1mupdate_scripts_classes[22m | [39m[0m
-[92m[ DONE ][39m [1mupdate_scripts_classes[22m
-[0m
-[   0% ] [90m[1mloading_editor_layout[22m | Started Loading editor (5 steps)[39m[0m
-[   0% ] [90m[1mloading_editor_layout[22m | Loading editor layout...[39m[0m
-[  16% ] [90m[1mloading_editor_layout[22m | Loading docks...[39m[0m
-[92m[ DONE ][39m [1mloading_editor_layout[22m
-[0m
-[?2004hroot@e7274b02129c:/app# cat > /tmp/test_grenade_probe.gd <<'EOF'
-[?2004l[?2004h> extends SceneTree
-[?2004l[?2004h> func _initialize() -> void:
-[?2004l[?2004h>     var packed := load("res://Main.tscn") as PackedScene
-[?2004l[?2004h>     if packed == null: quit(1); return
-[?2004l[?2004h>     var scene := packed.instantiate()
-[?2004l[?2004h>     root.add_child(scene)
-[?2004l[?2004h>     var grenade := scene.get_node("GrenadePhysics") as GrenadePhysics
-[?2004l[?2004h>     if grenade == null: quit(1); return
-[?2004l[?2004h>     var projectile: Dictionary = grenade.throw_grenade(10.0, PI * 0.5)
-[?2004l[?2004h>     if not projectile.get("active", false): quit(1); return
-[?2004l[?2004h>     if not grenade.advance_projectile(projectile, 0.5): quit(1); return
-[?2004l[?2004h>     var moved: Vector2 = projectile["position"]
-[?2004l[?2004h>     if absf(moved.x) > 0.001 or absf(moved.y - 5.0) > 0.001: quit(1); return
-[?2004l[?2004h>     var pool: Dictionary = grenade.spawn_burn_pool(Vector2(2, 3), 4.0, 2.0)
-[?2004l[?2004h>     if not pool.get("active", false): quit(1); return
-[?2004l[?2004h>     if not grenade.advance_burn_pool(pool, 0.5) or not pool.get("active", false): quit(1); return
-[?2004l[?2004h>     if not grenade.advance_burn_pool(pool, 1.5) or pool.get("active", true) or float(pool.get("remaining", 1.0)) != 0.0: quit(1); return
-[?2004l[?2004h>     if grenade.advance_burn_pool(pool, 0.1): quit(1); return
-[?2004l[?2004h>     if not grenade.throw_grenade(0.0, 0.0).is_empty(): quit(1); return
-[?2004l[?2004h>     if not grenade.spawn_burn_pool(Vector2.ZERO, 0.0, 2.0).is_empty(): quit(1); return
-[?2004l[?2004h>     if not grenade.spawn_burn_pool(Vector2.ZERO, 2.0, 0.0).is_empty(): quit(1); return
-[?2004l[?2004h>     var stable: Dictionary = grenade.spawn_burn_pool(Vector2.ZERO, 2.0, 1.0)
-[?2004l[?2004h>     if grenade.advance_burn_pool(stable, 0.0): quit(1); return
-[?2004l[?2004h>     if not stable.get("active", false): quit(1); return
-[?2004l[?2004h>     if grenade.smoke_state(0.5, 1.0) != "active" or grenade.smoke_state(1.0, 1.0) != "extinguished": quit(1); return
-[?2004l[?2004h>     print("GRENADE_SCENE_PROBE_OK")
-[?2004l[?2004h>     quit(0)
-[?2004l[?2004h> EOF
-[?2004l[?2004hroot@e7274b02129c:/app# godot --headless --path . --script /tmp/test_grenade_probe.gd
-[?2004lGodot Engine v4.6.1.stable.official.14d19694e - https://godotengine.org
-
-[?2004hroot@e7274b02129c:/app# godot --headless --path . --script /tmp/test_grenade_probe.gd
-[?2004lGodot Engine v4.6.1.stable.official.14d19694e - https://godotengine.org
-
-[?2004hroot@e7274b02129c:/app# cat > probe.gd <<'EOF'
-[?2004l[?2004h> extends SceneTree
-[?2004l[?2004h> func _initialize() -> void:
-[?2004l[?2004h>     var packed := load("res://Main.tscn") as PackedScene
-[?2004l[?2004h>     if packed == null: quit(1); return
-[?2004l[?2004h>     var scene := packed.instantiate()
-[?2004l[?2004h>     root.add_child(scene)
-[?2004l[?2004h>     var grenade := scene.get_node("GrenadePhysics") as GrenadePhysics
-[?2004l[?2004h>     if grenade == null: quit(1); return
-[?2004l[?2004h>     var projectile: Dictionary = grenade.throw_grenade(10.0, PI * 0.5)
-[?2004l[?2004h>     if not projectile.get("active", false): quit(1); return
-[?2004l[?2004h>     if not grenade.advance_projectile(projectile, 0.5): quit(1); return
-[?2004l[?2004h>     var moved: Vector2 = projectile["position"]
-[?2004l[?2004h>     if absf(moved.x) > 0.001 or absf(moved.y - 5.0) > 0.001: quit(1); return
-[?2004l[?2004h>     var pool: Dictionary = grenade.spawn_burn_pool(Vector2(2, 3), 4.0, 2.0)
-[?2004l[?2004h>     if not pool.get("active", false): quit(1); return
-[?2004l[?2004h>     if not grenade.advance_burn_pool(pool, 0.5) or not pool.get("active", false): quit(1); return
-[?2004l[?2004h>     if not grenade.advance_burn_pool(pool, 1.5) or pool.get("active", true) or float(pool.get("remaining", 1.0)) != 0.0: quit(1); return
-[?2004l[?2004h>     if grenade.advance_burn_pool(pool, 0.1): quit(1); return
-[?2004l[?2004h>     if not grenade.throw_grenade(0.0, 0.0).is_empty(): quit(1); return
-[?2004l[?2004h>     if not grenade.spawn_burn_pool(Vector2.ZERO, 0.0, 2.0).is_empty(): quit(1); return
-[?2004l[?2004h>     if not grenade.spawn_burn_pool(Vector2.ZERO, 2.0, 0.0).is_empty(): quit(1); return
-[?2004l[?2004h>     var stable: Dictionary = grenade.spawn_burn_pool(Vector2.ZERO, 2.0, 1.0)
-[?2004l[?2004h>     if grenade.advance_burn_pool(stable, 0.0): quit(1); return
-[?2004l[?2004h>     if not stable.get("active", false): quit(1); return
-[?2004l[?2004h>     if grenade.smoke_state(0.5, 1.0) != "active" or grenade.smoke_state(1.0, 1.0) != "extinguished": quit(1); return
-[?2004l[?2004h>     print("GRENADE_SCENE_PROBE_OK")
-[?2004l[?2004h>     quit(0)
-[?2004l[?2004h> EOF
-[?2004l[?2004hroot@e7274b02129c:/app# godot --headless --path . --script res://probe.gd
-[?2004lGodot Engine v4.6.1.stable.official.14d19694e - https://godotengine.org
-
-[?2004hroot@e7274b02129c:/app# rm -f probe.gd
-[?2004l[?2004hroot@e7274b02129c:/app# cat > simple_probe.gd <<'EOF'
-[?2004l[?2004h> extends SceneTree
-[?2004l[?2004h> func _init():
-[?2004l[?2004h>     print("SIMPLE_PROBE_RUN")
-[?2004l[?2004h>     quit(0)
-[?2004l[?2004h> EOF
-[?2004l[?2004hroot@e7274b02129c:/app# godot --headless --path . --script res://simple_probe.gd; echo "exit=$?"
-[?2004lGodot Engine v4.6.1.stable.official.14d19694e - https://godotengine.org
-
-SIMPLE_PROBE_RUN
-exit=0
-[?2004hroot@e7274b02129c:/app# rm -f simple_probe.gd
-[?2004l[?2004hroot@e7274b02129c:/app# cat > init_probe.gd <<'EOF'
-[?2004l[?2004h> extends SceneTree
-[?2004l[?2004h> func _initialize() -> void:
-[?2004l[?2004h>     print("INITIALIZE_CALLED")
-[?2004l[?2004h>     quit(0)
-[?2004l[?2004h> EOF
-[?2004l[?2004hroot@e7274b02129c:/app# godot --headless --path . --script res://init_probe.gd; echo "exit=$?"
-[?2004lGodot Engine v4.6.1.stable.official.14d19694e - https://godotengine.org
-
-INITIALIZE_CALLED
-exit=0
-[?2004hroot@e7274b02129c:/app# rm -f init_probe.gd
-[?2004l[?2004hroot@e7274b02129c:/app# python3 - <<'PY'
-[?2004l[?2004h> from pathlib import Path
-[?2004l[?2004h> p = Path('scripts/grenade_physics.gd')
-[?2004l[?2004h> s = p.read_text()
-[?2004l[?2004h> s = s.replace('''func advance_burn_pool(pool: Dictionary, delta: float) -> bool:\n    if delta <= 0.0 or pool.is_empty():\n        return false\n    pool["remaining"] = pool["remaining"] - delta\n    if pool["remaining"] <= 0.0:\n        pool["active"] = false\n    return true''', '''func advance_burn_pool(pool: Dictionary, delta: float) -> bool:\n    if delta <= 0.0 or pool.is_empty() or not pool.get("active", false):\n        return false\n    pool["remaining"] = pool["remaining"] - delta\n    if pool["remaining"] <= 0.0:\n        pool["active"] = false\n    return true''')
-[?2004l[?2004h> p.write_text(s)
-[?2004l[?2004h> PY
-[?2004l[?2004hroot@e7274b02129c:/app# sed -n '55,90p' scripts/grenade_physics.gd
-[?2004l        return "active"
-    return "extinguished"
-[?2004hroot@e7274b02129c:/app# cat > full_probe.gd <<'EOF'
-[?2004l[?2004h> extends SceneTree
-[?2004l[?2004h> func _initialize() -> void:
-[?2004l[?2004h>     var packed := load("res://Main.tscn") as PackedScene
-[?2004l[?2004h>     if packed == null: quit(1); return
-[?2004l[?2004h>     var scene := packed.instantiate()
-[?2004l[?2004h>     root.add_child(scene)
-[?2004l[?2004h>     var grenade := scene.get_node("GrenadePhysics") as GrenadePhysics
-[?2004l[?2004h>     if grenade == null: quit(1); return
-[?2004l[?2004h>     var projectile: Dictionary = grenade.throw_grenade(10.0, PI * 0.5)
-[?2004l[?2004h>     if not projectile.get("active", false): quit(1); return
-[?2004l[?2004h>     if not grenade.advance_projectile(projectile, 0.5): quit(1); return
-[?2004l[?2004h>     var moved: Vector2 = projectile["position"]
-[?2004l[?2004h>     if absf(moved.x) > 0.001 or absf(moved.y - 5.0) > 0.001: quit(1); return
-[?2004l[?2004h>     var pool: Dictionary = grenade.spawn_burn_pool(Vector2(2, 3), 4.0, 2.0)
-[?2004l[?2004h>     if not pool.get("active", false): quit(1); return
-[?2004l[?2004h>     if not grenade.advance_burn_pool(pool, 0.5) or not pool.get("active", false): quit(1); return
-[?2004l[?2004h>     if not grenade.advance_burn_pool(pool, 1.5) or pool.get("active", true) or float(pool.get("remaining", 1.0)) != 0.0: quit(1); return
-[?2004l[?2004h>     if grenade.advance_burn_pool(pool, 0.1): quit(1); return
-[?2004l[?2004h>     if not grenade.throw_grenade(0.0, 0.0).is_empty(): quit(1); return
-[?2004l[?2004h>     if not grenade.spawn_burn_pool(Vector2.ZERO, 0.0, 2.0).is_empty(): quit(1); return
-[?2004l[?2004h>     if not grenade.spawn_burn_pool(Vector2.ZERO, 2.0, 0.0).is_empty(): quit(1); return
-[?2004l[?2004h>     var stable: Dictionary = grenade.spawn_burn_pool(Vector2.ZERO, 2.0, 1.0)
-[?2004l[?2004h>     if grenade.advance_burn_pool(stable, 0.0): quit(1); return
-[?2004l[?2004h>     if not stable.get("active", false): quit(1); return
-[?2004l[?2004h>     if grenade.smoke_state(0.5, 1.0) != "active" or grenade.smoke_state(1.0, 1.0) != "extinguished": quit(1); return
-[?2004l[?2004h>     print("GRENADE_SCENE_PROBE_OK")
-[?2004l[?2004h>     quit(0)
-[?2004l[?2004h> EOF
-[?2004l[?2004hroot@e7274b02129c:/app# godot --headless --path . --script res://full_probe.gd; echo "exit=$?"
-[?2004lGodot Engine v4.6.1.stable.official.14d19694e - https://godotengine.org
-
-GRENADE_SCENE_PROBE_OK
-exit=0
-[?2004hroot@e7274b02129c:/app# rm -f full_probe.gd
-[?2004l[?2004hroot@e7274b02129c:/app# 
