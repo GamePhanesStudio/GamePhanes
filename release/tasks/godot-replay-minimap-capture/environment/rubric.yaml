@@ -1,0 +1,161 @@
+version: 3
+real_behavior_contract:
+  starter_object: Main.tscn ReplayCamera CanvasLayer and scripts/replay_ui.gd ReplayUi
+    HUD controller
+  multi_step_events:
+  - instantiate UI -> evaluate large and small viewport safe-area layouts
+  - begin capture -> inspect hidden state -> finish capture -> inspect restored state
+  state_transition: capture_pending transitions false -> true -> false while screenshot-only
+    HUD visibility is suppressed and restored
+  boundary_behavior: small viewport height contracts below the desktop height and
+    transition progress remains within its duration
+  observation: Godot headless probe observes native scene nodes, computed layout values,
+    transition alpha, and capture snapshots
+  runtime_adapter: godot
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  task_specificity: unique_runtime_contract
+  task_contract:
+    goal: Repair the Godot replay page so the minimap is attached to an independent
+      CanvasLayer, HUD height is computed from viewport height and top and bottom
+      safe-area inputs, screenshot-only HUD elements are hidden before capture and
+      restored after capture, and UI transition duration and alpha remain testable.
+    starter_object: Main.tscn ReplayCamera CanvasLayer and scripts/replay_ui.gd ReplayUi
+      HUD controller
+    event_sequence:
+    - Instantiate the ReplayUi HUD controller.
+    - Evaluate UI height for large and small viewport heights using top and bottom
+      safe-area inputs.
+    - Begin capture and inspect the hidden capture state.
+    - Finish capture and inspect the restored capture state.
+    state_transition: capture_pending transitions from false to true to false while
+      screenshot-only HUD visibility is suppressed during capture and restored after
+      capture.
+    boundary_behavior: The computed UI height for a small viewport is lower than the
+      computed desktop height, and transition progress remains within the configured
+      transition duration.
+    runtime_observation: A Godot headless probe observes ReplayUi instantiation, computed
+      layout values, transition duration and alpha, capture_pending, and capture snapshots.
+    runtime_adapter: godot
+  checks:
+  - id: replay_probe
+    mode: runtime
+    weight: 1.0
+    dimensions:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    rationale: The supplied Godot probe instantiates scripts/replay_ui.gd, requires
+      compute_ui_height and begin_capture, verifies large and small viewport height
+      behavior, checks transition_duration and transition alpha at 0.125 seconds,
+      verifies capture_pending and extra_elements_visible during capture, and verifies
+      restoration after finish_capture.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - replay_probe
+    boundary_behavior:
+      required: true
+      check_ids:
+      - replay_probe
+    runtime_observation:
+      required: true
+      check_ids:
+      - replay_probe
+  no_op_requirement: The implementation must produce the observed ReplayUi behavior;
+    unchanged or non-functional edits that do not pass replay_probe do not satisfy
+    the rubric.
+  static_checks_role: The existing file_exists, file_contains, and headless_parse
+    checks provide static and parse evidence for scripts/replay_ui.gd, Main.tscn,
+    required identifiers, CanvasLayer text, and project parsing, but they are not
+    included as behavior checks because the permitted runtime-backed check ID list
+    contains only replay_probe.
+  evidence_basis:
+  - The supplied replay_probe is the only permitted runtime-backed behavior check.
+  - The probe directly checks ReplayUi instantiation, compute_ui_height, transition_duration,
+    transition alpha, begin_capture, capture_snapshot, finish_capture, capture_pending,
+    and extra_elements_visible.
+  - The existing static checks check for scripts/replay_ui.gd, the string CanvasLayer
+    in Main.tscn, compute_ui_height, capture_pending, and a headless parse exit code.
+  unsupported_claims:
+  - The current runtime probe does not load or instantiate Main.tscn, so it cannot
+    prove that the minimap in the native scene is attached to an independent CanvasLayer
+    or that the scene's ReplayCamera and CanvasLayer structure is correct.
+  - The current runtime probe calls compute_ui_height with supplied numeric arguments
+    but does not observe an instantiated UI node reacting to an actual Godot viewport
+    or native safe-area layout.
+  - The current runtime probe observes capture_snapshot dictionaries rather than native
+    scene HUD nodes, so it cannot prove that the actual screenshot-only HUD elements
+    are hidden in the rendered scene before a screenshot and restored afterward.
+  - The current runtime probe checks transition alpha at one time value and that transition_duration
+    is positive, but does not establish transition behavior across the full duration
+    or prove that progress remains bounded for all times within the duration.
+  - The current checks cannot fully prove the end-to-end contract for Main.tscn and
+    the native replay page without a re-authored probe that loads the scene and observes
+    its nodes and runtime layout.
+  authoring:
+    schema_version: gameforgebench.rubric-authoring.v1
+    contract_fingerprint: 827c05366749559c8d9f9feb46432403b4478530b43456a1fc8f4ae9ede5cf51
+    task_name: godot-replay-minimap-capture-timing
+    dimensions_in_rubric:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    controls_required_before_release: true
+  acceptance_mode: runtime_behavior
+  re_authoring_required: false
+  re_authoring_reason: null
+checks:
+- id: replay_script
+  type: file_exists
+  path: scripts/replay_ui.gd
+  description: replay HUD controller exists
+- id: canvas_layer
+  type: file_contains
+  path: Main.tscn
+  expected: CanvasLayer
+  description: minimap is attached to a dedicated CanvasLayer
+- id: dynamic_height
+  type: file_contains
+  path: scripts/replay_ui.gd
+  expected: compute_ui_height
+  description: HUD height is derived from viewport and safe-area inputs
+- id: capture_state
+  type: file_contains
+  path: scripts/replay_ui.gd
+  expected: capture_pending
+  description: capture has an explicit temporal state
+- id: headless_parse
+  type: command
+  command: godot --headless --path . --editor --quit
+  expected: exit_code=0
+  description: Godot project parses headlessly
+  path: Main.tscn
+- id: replay_probe
+  type: godot_probe
+  probe_script: "extends SceneTree\n\nfunc fail(stage: String) -> void:\n    print(\"\
+    REPLAY_UI_FAIL:\" + stage)\n    quit(1)\n\nfunc _initialize() -> void:\n    var ui :=\
+    \ preload(\"res://scripts/replay_ui.gd\").new()\n    if not ui is Node:\n    \
+    \    fail(\"instantiate\")\n        return\n    if not ui.has_method(\"compute_ui_height\"\
+    ) or not ui.has_method(\"begin_capture\"):\n        fail(\"public_api\")\n   \
+    \     return\n    var desktop_height := ui.compute_ui_height(1280.0, 40.0, 20.0)\n\
+    \    if desktop_height <= 0.0:\n        fail(\"large_viewport_layout\")\n    \
+    \    return\n    var compact_height := ui.compute_ui_height(300.0, 40.0, 20.0)\n\
+    \    if compact_height >= desktop_height:\n        fail(\"small_viewport_layout\"\
+    )\n        return\n    if ui.transition_duration <= 0.0:\n        fail(\"transition_duration\"\
+    )\n        return\n    if ui.has_method(\"transition_alpha\"):\n        if absf(float(ui.call(\"\
+    transition_alpha\", 0.125)) - 0.5) > 0.001:\n            fail(\"transition_progress\"\
+    )\n            return\n    elif ui.get(\"transition_alpha\") == null:\n      \
+    \  fail(\"transition_api\")\n        return\n    ui.begin_capture()\n    var hidden\
+    \ := ui.capture_snapshot()\n    if hidden.get(\"extra_elements_visible\", true)\
+    \ or not hidden.get(\"capture_pending\", false):\n        fail(\"capture_hide\"\
+    )\n        return\n    ui.finish_capture()\n    var restored := ui.capture_snapshot()\n\
+    \    if not restored.get(\"extra_elements_visible\", false) or restored.get(\"\
+    capture_pending\", true):\n        fail(\"capture_restore\")\n        return\n\
+    \    print(\"REPLAY_UI_PROBE_OK\")\n    quit(0)\n"
+  expected: REPLAY_UI_PROBE_OK
+  description: safe-area sizing, transition timing and screenshot overlay suppression
+    pass
+  path: Main.tscn
+  timeout: 30

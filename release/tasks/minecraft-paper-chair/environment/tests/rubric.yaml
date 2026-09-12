@@ -1,0 +1,149 @@
+version: 3
+real_behavior_contract:
+  starter_object: Paper JavaPlugin chair seat component with plugin.yml entrypoint
+    and BoundingBox collider
+  multi_step_events:
+  - load Paper plugin -> create chair state -> interact with player-1
+  - repeat interaction -> reset/reload plugin state -> inspect snapshot
+  state_transition: chair interaction changes the server-side seated state and seat
+    count
+  boundary_behavior: duplicate interaction, empty player id, and reload must not create
+    duplicate seats
+  observation: Paper JVM loads the plugin and verifier observes BoundingBox and plugin
+    state through runtime calls
+  runtime_adapter: minecraft
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  task_specificity: unique_runtime_contract
+  task_contract:
+    goal: Repair the Paper JavaPlugin chair component so chairHitbox() exposes a 1x1x1
+      Bukkit BoundingBox and repeated chair interaction produces observable seated
+      state without duplicate seats.
+    starter_object: Paper JavaPlugin chair seat component in com.gameforge.chair.ChairPlugin
+      with plugin.yml entrypoint and a BoundingBox collider.
+    event_sequence:
+    - Load the Paper plugin and access ChairPlugin.
+    - Create or inspect the chair state.
+    - Call chairHitbox() and inspect its dimensions.
+    - Interact with the chair using player-1.
+    - Repeat interaction using player-1.
+    - Interact using an empty player ID.
+    - Inspect snapshot().
+    - Call resetForReload().
+    - Inspect snapshot() after reload reset.
+    state_transition: The first interaction with player-1 changes the server-side
+      chair state to one seated player; a duplicate interaction does not increase
+      the seat count; resetForReload() clears the state.
+    boundary_behavior: An empty player ID is rejected, a repeated interaction by player-1
+      is rejected, and reload reset does not preserve a seated player.
+    runtime_observation: The Paper runtime probe observes chairHitbox() dimensions
+      and ChairPlugin state through runtime calls, including handleChairInteract(),
+      snapshot(), and resetForReload().
+    runtime_adapter: minecraft
+  checks:
+  - id: minecraft_probe
+    mode: runtime
+    weight: 1.0
+    dimensions:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    rationale: The Paper probe verifies the required SOURCE_TAG, checks that chairHitbox()
+      has exactly 1.0 block width, height, and depth, verifies first interaction success,
+      duplicate and empty-ID rejection, snapshot state, reload reset, and emits MINECRAFT_PAPER_PROBE_OK.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - minecraft_probe
+    boundary_behavior:
+      required: true
+      check_ids:
+      - minecraft_probe
+    runtime_observation:
+      required: true
+      check_ids:
+      - minecraft_probe
+  no_op_requirement:
+    required: true
+    description: A no-op or implementation that does not satisfy the runtime probe
+      must not receive credit.
+  static_checks_role:
+    description: The existing file_exists and file_contains checks provide static
+      evidence that plugin.yml exists and ChairPlugin.java contains extends JavaPlugin,
+      but they are not included as executable rubric checks because only the runtime-backed
+      check ID minecraft_probe is permitted.
+    check_ids: []
+  evidence_basis:
+  - Current runtime-backed check minecraft_probe.
+  - Current static check for src/main/resources/plugin.yml existence.
+  - Current static check for extends JavaPlugin in src/main/java/com/gameforge/chair/ChairPlugin.java.
+  - Task manifest real_behavior_contract.
+  - Required probe assertions for SOURCE_TAG, BoundingBox dimensions, interaction,
+    duplicate interaction, empty player ID, snapshot(), and resetForReload().
+  unsupported_claims:
+  - The current probe checks BoundingBox dimensions but does not verify that each
+    chairHitbox() call returns an independent BoundingBox object.
+  - The current probe does not directly inspect plugin.yml contents, including the
+    declared entrypoint, beyond the separate generic file-existence check.
+  - The current probe does not directly verify that the loaded plugin instance is
+    the JavaPlugin entrypoint declared in plugin.yml; it only executes runtime calls
+    against ChairPlugin.
+  - The current probe does not directly observe third-person camera movement or prove
+    that a camera cannot enter chair geometry; it uses a 1x1x1 BoundingBox dimension
+    check as the available collision proxy.
+  authoring:
+    schema_version: gameforgebench.rubric-authoring.v1
+    contract_fingerprint: e73e95b6bca216e01629d380cc75f9126293539db5a07886e740360e05d7f53f
+    task_name: minecraft-paper-chair-collision
+    dimensions_in_rubric:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    controls_required_before_release: true
+  acceptance_mode: runtime_behavior
+  re_authoring_required: false
+  re_authoring_reason: null
+checks:
+- id: minecraft_manifest
+  type: file_exists
+  path: src/main/resources/plugin.yml
+  description: Paper plugin manifest exists
+- id: minecraft_source
+  type: file_contains
+  path: src/main/java/com/gameforge/chair/ChairPlugin.java
+  expected: extends JavaPlugin
+  description: Paper JavaPlugin chair component exists
+- id: minecraft_probe
+  type: paper_probe
+  path: src/main/java/com/gameforge/chair/ChairPlugin.java
+  expected: MINECRAFT_PAPER_PROBE_OK
+  probe_script: 'if (!com.gameforge.chair.ChairPlugin.SOURCE_TAG.equals("7a67866ae705"))
+    throw new IllegalStateException("source tag");
+
+    org.bukkit.util.BoundingBox box = com.gameforge.chair.ChairPlugin.chairHitbox();
+
+    if ((box.getMaxX() - box.getMinX()) != 1.0 || (box.getMaxY() - box.getMinY())
+    != 1.0 || (box.getMaxZ() - box.getMinZ()) != 1.0) throw new IllegalStateException("hitbox");
+
+    if (!com.gameforge.chair.ChairPlugin.handleChairInteract("player-1")) throw new
+    IllegalStateException("first interaction");
+
+    if (com.gameforge.chair.ChairPlugin.handleChairInteract("player-1")) throw new
+    IllegalStateException("duplicate interaction");
+
+    if (com.gameforge.chair.ChairPlugin.handleChairInteract("")) throw new IllegalStateException("empty
+    id");
+
+    if (!com.gameforge.chair.ChairPlugin.snapshot().startsWith("1:player-1")) throw
+    new IllegalStateException("state");
+
+    com.gameforge.chair.ChairPlugin.resetForReload();
+
+    if (!com.gameforge.chair.ChairPlugin.snapshot().equals("0:")) throw new IllegalStateException("reload");
+
+    System.out.println("MINECRAFT_PAPER_PROBE_OK");
+
+    '
+  description: Paper runtime executes interaction, duplicate, invalid-input, and reload
+    events

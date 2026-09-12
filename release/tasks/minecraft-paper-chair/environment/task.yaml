@@ -1,0 +1,31 @@
+name: minecraft-paper-chair-collision
+description: Repair a Paper 1.20.4 chair plugin so its seat collision and repeated
+  interaction behavior are observable in a running Minecraft server.
+engine: minecraft
+deliverables:
+- src/main/java/com/gameforge/chair/ChairPlugin.java
+- src/main/resources/plugin.yml
+validation:
+- Paper server loads the plugin
+- hidden multi-step server probe passes
+runtime_adapter: minecraft
+real_behavior_contract:
+  starter_object: Paper JavaPlugin chair seat component with plugin.yml entrypoint
+    and BoundingBox collider
+  multi_step_events:
+  - load Paper plugin -> create chair state -> interact with player-1
+  - repeat interaction -> reset/reload plugin state -> inspect snapshot
+  state_transition: chair interaction changes the server-side seated state and seat
+    count
+  boundary_behavior: duplicate interaction, empty player id, and reload must not create
+    duplicate seats
+  observation: Paper JVM loads the plugin and verifier observes BoundingBox and plugin
+    state through runtime calls
+  runtime_adapter: minecraft
+version: 4
+authoring:
+  schema_version: gameforgebench.authoring-pass.v1
+  contract_fingerprint: e73e95b6bca216e01629d380cc75f9126293539db5a07886e740360e05d7f53f
+  contract_status: task_specific_runtime_contract
+  controls_status: harbor_oracle_noop_v4
+  source: canonical status.tsv row

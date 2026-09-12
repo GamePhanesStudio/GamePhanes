@@ -1,0 +1,34 @@
+schema_version = "1.1"
+engine = "godot"
+artifacts = [
+    "/app/Main.tscn",
+    "/app/project.godot",
+    "/app/scripts/",
+]
+
+[task]
+name = "gameforgebench/gameforgebench-081-sess-msmrftww-970945dce66d"
+description = "Implement a Godot scene_run manager with PackedScene execution gating, crash-lock recovery, and isolated runtime snapshots."
+
+[metadata]
+difficulty = "medium"
+category = "game-development"
+tags = ["godot4", "gdscript", "plugin", "state-machine"]
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+build_timeout_sec = 1800.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240
+
+[verifier.environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240

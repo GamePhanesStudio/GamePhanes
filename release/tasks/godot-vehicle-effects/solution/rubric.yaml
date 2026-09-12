@@ -1,0 +1,148 @@
+version: 3
+real_behavior_contract:
+  starter_object: Main.tscn Godot scene with VehicleEffects vehicle braking, launcher
+    camera and rocket smoke component
+  multi_step_events:
+  - instantiate effects -> decelerate a moving vehicle over multiple deltas
+  - compute launcher follow -> sample a rocket smoke path -> reject invalid parameters
+  state_transition: vehicle speed decreases toward zero and smoke samples advance
+    along the rocket trajectory
+  boundary_behavior: deceleration cannot reverse speed; vertical camera offset stays
+    zero; invalid smoke inputs return empty
+  observation: Godot headless probe observes native scene startup and VehicleEffects
+    runtime vectors/arrays
+  runtime_adapter: godot
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  task_specificity: unique_runtime_contract
+  task_contract:
+    goal: Implement vehicle braking, horizontal launcher camera follow, and continuous
+      rocket smoke path behavior in the Godot project.
+    starter_object: Main.tscn and scripts/vehicle_effects.gd, with the VehicleEffects
+      script exposing decelerate, camera_offset, and smoke_path operations.
+    event_sequence:
+    - Call decelerate with an initial vehicle speed, deceleration, and delta over
+      successive updates.
+    - Compute a launcher camera offset from launcher and player positions using horizontal
+      difference only.
+    - Generate smoke samples from a rocket start position, velocity, duration, and
+      sampling interval.
+    state_transition: Vehicle speed decreases without becoming negative, the camera
+      offset contains only the horizontal difference, and smoke samples advance along
+      the rocket trajectory.
+    boundary_behavior: Deceleration clamps a speed that would reach or pass zero to
+      zero; camera vertical offset remains zero; invalid smoke parameters must return
+      an empty array.
+    runtime_observation: A Godot probe instantiates scripts/vehicle_effects.gd and
+      observes decelerate, camera_offset, and smoke_path return values.
+    runtime_adapter: godot
+  checks:
+  - id: vehicle_effects_probe
+    mode: runtime
+    weight: 1.0
+    dimensions:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    rationale: The probe verifies decelerate(100, 40, 1) returns 60, decelerate(10,
+      40, 1) clamps to 0, camera_offset preserves the horizontal difference and returns
+      zero vertical offset, and smoke_path produces six trajectory samples ending
+      at the expected point.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - vehicle_effects_probe
+    boundary_behavior:
+      required: true
+      check_ids:
+      - vehicle_effects_probe
+    runtime_observation:
+      required: true
+      check_ids:
+      - vehicle_effects_probe
+  no_op_requirement:
+    must_change_behavior: true
+    evidence: The runtime probe must observe the specified deceleration, horizontal
+      camera offset, and smoke path return values; merely providing files or function
+      names is insufficient.
+  static_checks_role:
+    role: supporting_only
+    checks:
+    - effects_script
+    - brake_api
+    - smoke_api
+    - headless_parse
+    limitations: The listed static checks establish file presence, function-name presence,
+      and headless parsing only. They do not independently prove runtime behavior.
+  evidence_basis:
+  - The vehicle_effects_probe directly instantiates res://scripts/vehicle_effects.gd.
+  - The probe verifies positive deceleration numerically and verifies clamping to
+    zero.
+  - The probe verifies camera_offset(Vector2(10, 80), Vector2(42, 120)) returns Vector2(32,
+    0).
+  - The probe verifies smoke_path(Vector2.ZERO, Vector2(10, 0), 0.5, 0.1) returns
+    six points from Vector2.ZERO through Vector2(5, 0).
+  - The headless_parse check verifies that Main.tscn parses with exit code zero.
+  unsupported_claims:
+  - The current runtime probe does not test that invalid smoke_path parameters return
+    an empty array.
+  - The current runtime probe does not observe native Main.tscn scene startup or VehicleEffects
+    state inside the scene; it instantiates the script directly.
+  - The current runtime probe does not execute multi-step vehicle deceleration over
+    multiple deltas; it checks two independent decelerate calls.
+  - The current runtime probe does not verify an actual launcher camera node following
+    an actual launcher and player.
+  - The current runtime probe does not verify a rocket smoke component emitting or
+    rendering smoke continuously along a trajectory.
+  - The current checks do not prove that all required behavior is implemented in the
+    submitted Main.tscn scene rather than only in the directly instantiated script.
+  authoring:
+    schema_version: gameforgebench.rubric-authoring.v1
+    contract_fingerprint: 201585fa962edf7e8112fbea55c88f9c03bbe1bef7c6c50059ad8554c715404a
+    task_name: godot-vehicle-braking-camera-and-rocket-smoke
+    dimensions_in_rubric:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    controls_required_before_release: true
+  acceptance_mode: runtime_behavior
+  re_authoring_required: false
+  re_authoring_reason: null
+checks:
+- id: effects_script
+  type: file_exists
+  path: scripts/vehicle_effects.gd
+  description: vehicle effects script exists
+- id: brake_api
+  type: file_contains
+  path: scripts/vehicle_effects.gd
+  expected: func decelerate
+  description: smooth braking API exists
+- id: smoke_api
+  type: file_contains
+  path: scripts/vehicle_effects.gd
+  expected: func smoke_path
+  description: rocket smoke path API exists
+- id: headless_parse
+  type: command
+  command: godot --headless --path . --editor --quit
+  expected: exit_code=0
+  description: Godot project parses headlessly
+  path: Main.tscn
+- id: vehicle_effects_probe
+  type: godot_probe
+  probe_script: "extends SceneTree\nfunc _init() -> void:\n    var effects := preload(\"\
+    res://scripts/vehicle_effects.gd\").new()\n    if effects.decelerate(100.0, 40.0,\
+    \ 1.0) != 60.0: quit(1); return\n    if effects.decelerate(10.0, 40.0, 1.0) !=\
+    \ 0.0: quit(1); return\n    var offset: Vector2 = effects.camera_offset(Vector2(10.0,\
+    \ 80.0), Vector2(42.0, 120.0))\n    if offset != Vector2(32.0, 0.0): quit(1);\
+    \ return\n    var path: Array[Vector2] = effects.smoke_path(Vector2.ZERO, Vector2(10.0,\
+    \ 0.0), 0.5, 0.1)\n    if path.size() != 6 or path[0] != Vector2.ZERO or path[-1]\
+    \ != Vector2(5.0, 0.0): quit(1); return\n    print(\"VEHICLE_EFFECTS_PROBE_OK\"\
+    ); quit(0)\n"
+  expected: VEHICLE_EFFECTS_PROBE_OK
+  description: vehicle braking, horizontal camera follow and continuous smoke points
+    pass
+  path: Main.tscn
+  timeout: 60

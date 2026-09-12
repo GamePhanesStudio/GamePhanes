@@ -1,0 +1,152 @@
+version: 3
+real_behavior_contract:
+  starter_object: Main.tscn Godot scene with EndlessLevel streaming generator and
+    spike hazard slots
+  multi_step_events:
+  - configure seed -> generate chunk 0 -> generate chunk 1
+  - repeat chunk request -> test valid and invalid entity unlock progress -> mutate
+    snapshot
+  state_transition: seed configuration deterministically changes generated chunk data
+    and valid progress unlocks entities
+  boundary_behavior: repeated chunk requests are stable; invalid entities or progress
+    below three remain locked
+  observation: Godot headless probe observes native scene startup and EndlessLevel
+    chunk arrays/hazard state
+  runtime_adapter: godot
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  task_specificity: unique_runtime_contract
+  task_contract:
+    goal: Implement a Godot 4 endless-level generator in scripts/endless_level.gd
+      and a startable Main.tscn scene. configure_seed(value) must reset deterministic
+      generation state; generate_chunk(index) must produce six stable slot dictionaries
+      for each seed and index, including spike hazard slots in platform gaps; repeated
+      requests must not change the result; unlocked(entity_id, progress) must open
+      only valid entities when progress is at least three; snapshot() must return
+      an isolated copy.
+    starter_object: Main.tscn Godot scene with an EndlessLevel streaming generator
+      and spike hazard slots.
+    event_sequence:
+    - Configure a seed with configure_seed(value).
+    - Generate chunk 0 and chunk 1 with generate_chunk(index).
+    - Request the same chunk again and compare its six slot dictionaries with the
+      first result.
+    - Test entity unlock progress with valid and invalid entity identifiers.
+    - Inspect snapshot() and mutate the returned nested chunk data.
+    - Observe the Godot headless result.
+    state_transition: Changing or resetting the configured seed deterministically
+      controls generated chunk data, and a valid entity becomes unlocked only when
+      progress is at least three.
+    boundary_behavior: Repeated generate_chunk(index) requests are stable; generated
+      chunks contain six slots; invalid entities and progress below three remain locked;
+      snapshot mutations do not alter generator state.
+    runtime_observation: A Godot headless probe loads scripts/endless_level.gd, generates
+      a chunk twice, checks six slots and at least one spike flag, compares a second
+      generator using the same seed, checks unlock results for progress two and three,
+      and checks nested snapshot isolation.
+    runtime_adapter: godot
+  checks:
+  - id: endless_probe
+    mode: godot_probe
+    weight: 1.0
+    dimensions:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    rationale: The existing Godot probe verifies six-slot deterministic output for
+      a repeated seed and chunk index, presence of a spike-marked slot, reproducibility
+      across generator instances, unlock gating at progress two and three, and isolation
+      of mutated snapshot chunk data.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - endless_probe
+    boundary_behavior:
+      required: true
+      check_ids:
+      - endless_probe
+    runtime_observation:
+      required: true
+      check_ids:
+      - endless_probe
+  no_op_requirement: The deliverables must contain executable Godot scene and GDScript
+    behavior; prose or documentation alone does not satisfy the task.
+  static_checks_role: The file-existence, file-content, and headless-parse checks
+    are supporting static evidence only and are not included as behavior-scoring checks
+    because the allowed runtime-backed check IDs contain only endless_probe.
+  evidence_basis:
+  - The existing endless_probe instantiates scripts/endless_level.gd directly rather
+    than starting Main.tscn.
+  - The probe checks chunk size, repeated-result equality, same-seed reproducibility,
+    a spike boolean, unlock behavior for progress two and three, and nested snapshot
+    mutation isolation.
+  - The probe does not compare different seed values or call configure_seed twice
+    on the same generator instance.
+  - The probe does not establish that spike slots are specifically located in platform
+    gaps.
+  - The probe does not test invalid entity identifiers separately from the tested
+    entity identifier.
+  - The probe does not observe native scene startup or scene-integrated EndlessLevel
+    state.
+  unsupported_claims:
+  - Main.tscn starts successfully with the EndlessLevel streaming generator active.
+  - configure_seed(value) resets an already-used generator instance and changes generated
+    data when a different seed is supplied.
+  - Spike hazards are placed specifically in platform gaps rather than merely represented
+    by at least one spike boolean.
+  - Every invalid entity identifier remains locked.
+  - The full scene-level observation contract is satisfied, because the current probe
+    instantiates the script directly and does not start Main.tscn.
+  authoring:
+    schema_version: gameforgebench.rubric-authoring.v1
+    contract_fingerprint: c1236faf9ab0a8be45601797e0e578e60182d8b053b6c43849a98fc42f8161db
+    task_name: godot-endless-streaming-level
+    dimensions_in_rubric:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    controls_required_before_release: true
+  acceptance_mode: runtime_behavior
+  re_authoring_required: false
+  re_authoring_reason: null
+checks:
+- id: level_script
+  type: file_exists
+  path: scripts/endless_level.gd
+  description: endless level generator exists
+- id: seed_api
+  type: file_contains
+  path: scripts/endless_level.gd
+  expected: func configure_seed
+  description: seed control API exists
+- id: chunk_api
+  type: file_contains
+  path: scripts/endless_level.gd
+  expected: func generate_chunk
+  description: streaming chunk API exists
+- id: headless_parse
+  type: command
+  command: godot --headless --path . --editor --quit
+  expected: exit_code=0
+  description: Godot project parses headlessly
+  path: Main.tscn
+- id: endless_probe
+  type: godot_probe
+  probe_script: "extends SceneTree\nfunc _initialize() -> void:\n    var first := preload(\"\
+    res://scripts/endless_level.gd\").new()\n    first.configure_seed(42)\n    var\
+    \ a: Array[Dictionary] = first.generate_chunk(2)\n    var b: Array[Dictionary]\
+    \ = first.generate_chunk(2)\n    if a.size() != 6 or a != b: quit(1); return\n\
+    \    var has_spike := false\n    for cell in a:\n        if bool(cell.get(\"spike\"\
+    , false)): has_spike = true\n    if not has_spike: quit(1); return\n    var second\
+    \ := preload(\"res://scripts/endless_level.gd\").new()\n    second.configure_seed(42)\n\
+    \    if second.generate_chunk(2) != a: quit(1); return\n    if first.unlocked(\"\
+    gate\", 2) or not first.unlocked(\"gate\", 3): quit(1); return\n    var copy:\
+    \ Dictionary = first.snapshot(); copy[\"chunks\"][2][0][\"height\"] = 999\n  \
+    \  if int(first.snapshot()[\"chunks\"][2][0][\"height\"]) == 999: quit(1); return\n\
+    \    print(\"ENDLESS_LEVEL_PROBE_OK\"); quit(0)\n"
+  expected: ENDLESS_LEVEL_PROBE_OK
+  description: seed reproducibility, gap spikes, unlock gating and snapshot isolation
+    pass
+  path: Main.tscn
+  timeout: 60

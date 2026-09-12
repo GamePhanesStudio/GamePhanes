@@ -1,0 +1,32 @@
+name: godot-abandoned-zone-night-optimization
+version: 5
+engine: godot
+runtime_adapter: godot
+source_intent_anchor: 'Godot top-down shooter trajectory: implement the abandoned-zone
+  night slice with landmarks, weapon damage, wave growth, navigation tuning, and consistent
+  presentation.'
+real_behavior_contract:
+  starter_object: Main.tscn NightZone Node2D with Landmark, Weapon, EnemySpawner,
+    and NavigationRegion engine anchors
+  multi_step_events:
+  - configure -> spawn wave 1 -> spawn wave 3 -> path cost -> duplicate/invalid events
+  state_transition: night mode and tuning values change from defaults; wave 3 enemy
+    health exceeds wave 1
+  boundary_behavior: duplicate configuration ID, invalid wave, and negative path input
+    do not mutate state; snapshot is isolated
+  observation: native Godot headless probe observes scene nodes and runtime dictionaries
+  runtime_adapter: godot
+description: Implement a runnable night-zone slice with landmarks, weapon data, enemy
+  growth and path-cost tuning.
+deliverables:
+- Main.tscn
+- scripts/night_zone.gd
+validation:
+- Godot parses headlessly
+- hidden runtime probe passes
+authoring:
+  schema_version: gameforgebench.authoring-pass.v1
+  contract_fingerprint: 95e5ce2c794e81bd7f471b4ec1b633c8de8ae01c8513bb9eed59ab4e3d114e5f
+  contract_status: task_specific_runtime_contract
+  controls_status: pending_after_authoring_change
+  source: canonical status.tsv row

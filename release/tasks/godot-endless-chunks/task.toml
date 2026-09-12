@@ -1,0 +1,31 @@
+schema_version = "1.1"
+engine = "godot"
+artifacts = [
+    "/app/scripts/",
+]
+
+[task]
+name = "gameforgebench/gameforgebench-067-history-c5ded997a8df1351f6ead22f9ac7f09df8999253"
+description = "Generate deterministic endless chunks with spike hazards in gaps and gated entity unlocks."
+
+[metadata]
+difficulty = "unknown"
+category = "game-development"
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240
+
+[verifier.environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240

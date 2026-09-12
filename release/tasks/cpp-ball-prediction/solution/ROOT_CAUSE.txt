@@ -1,0 +1,2 @@
+Root cause: the ball-ball resolver only swapped linear velocity and left spin state untouched. The later spin/friction step caused a measurable drift away from the intended line.
+Fix: transfer spin during contact and separate overlapping centers before the next tick.

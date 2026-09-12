@@ -1,0 +1,206 @@
+version: 3
+real_behavior_contract:
+  starter_object: C++ game-engine scene with directional lights, shadow-casting scene
+    objects, and graphics frame state
+  multi_step_events:
+  - reset frame -> select active directional shadow light -> begin shadow pass ->
+    upload VP matrix and parameters
+  - draw active shadow casters -> end shadow pass -> apply lighting -> observe the
+    frame snapshot
+  - reset again -> render a scene without a valid shadow light -> confirm prior shadow
+    state is isolated
+  state_transition: the graphics runtime moves from idle to an active shadow pass,
+    becomes shadow-ready after valid uploads and a caster draw, then returns to idle
+    before lighting
+  boundary_behavior: duplicate begin/end calls and operations outside an active pass
+    are ignored; inactive or non-shadow objects do not contribute; reset prevents
+    stale state reuse
+  observation: a verifier-owned C++ probe compiles the engine sources and observes
+    the ordered render-event stream, uploaded state, caster count, readiness, and
+    frame isolation
+  runtime_adapter: cpp
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  task_specificity: unique_runtime_contract
+  task_contract:
+    goal: Implement a deterministic shadow-map lifecycle in the C++ graphics and scene
+      runtime. scene::render() must reset per-frame state, select the first active
+      directional scene_light with casts_shadows enabled, execute one shadow pass,
+      upload its shadow_vp matrix and shadow_params, draw active shadow-casting shadow_caster
+      objects, end the pass, and apply lighting.
+    starter_object:
+    - engine/include/kay/render/graphics.h
+    - engine/include/kay/scene/scene.h
+    - engine/src/render/graphics.cpp
+    - engine/src/scene/scene.cpp
+    event_sequence:
+    - render_event::shadow_pass_begin
+    - render_event::shadow_vp_uploaded
+    - render_event::shadow_params_uploaded
+    - render_event::shadow_caster_drawn
+    - render_event::shadow_pass_end
+    - render_event::lighting_applied
+    state_transition: graphics::reset_frame() clears shadow_pass_active, shadow_ready,
+      shadow_vp, shadow_params, light_index, caster_count, and the per-frame event
+      stream. A valid scene shadow light causes begin_shadow_pass(), shadow_vp upload,
+      shadow_params upload, qualifying caster draws, end_shadow_pass(), and lighting
+      application. After the pass, shadow_pass_active is false and shadow_ready is
+      true.
+    boundary_behavior: Only active directional lights with casts_shadows enabled may
+      start the shadow pass. Point lights, inactive lights, inactive shadow_caster
+      objects, and non-shadow-casting objects must not contribute. Repeated begin_shadow_pass()
+      calls while active and repeated end_shadow_pass() calls after completion are
+      idempotent. Shadow uploads and caster draws outside an active pass are ignored.
+    runtime_observation: The observable contract is kay::frame_snapshot together with
+      the ordered render_event stream. The snapshot exposes shadow_pass_active, shadow_ready,
+      shadow_vp, params, light_index, caster_count, lighting_count, and events.
+    runtime_adapter: cpp
+  checks:
+  - id: shadow_runtime_probe
+    mode: cpp_probe
+    weight: 1.0
+    dimensions:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    rationale: The verifier-owned native probe exercises scene rendering with a point
+      light and a directional shadow light, checks shadow matrix and parameter uploads,
+      filters inactive and non-shadow casters, verifies event ordering and counts,
+      verifies frame isolation after a scene without a valid shadow light, rejects
+      invalid uploads and draws outside an active pass, and checks duplicate begin/end
+      behavior.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - shadow_runtime_probe
+      - shadow_selection_probe
+    boundary_behavior:
+      required: true
+      check_ids:
+      - shadow_runtime_probe
+      - shadow_selection_probe
+    runtime_observation:
+      required: true
+      check_ids:
+      - shadow_runtime_probe
+      - shadow_selection_probe
+  no_op_requirement: 'A no-op or file-only change must not receive credit: the implementation
+    must satisfy the native shadow lifecycle probe, including the expected frame_snapshot
+    values and ordered render_event sequence.'
+  static_checks_role: The existing file-existence checks establish that the CMake
+    project and the two runtime source files remain present. The existing compile_engine
+    command check establishes C++17 compilation with warnings enabled. These checks
+    are supporting artifact and build evidence; behavioral credit is assigned only
+    through shadow_runtime_probe.
+  evidence_basis:
+  - shadow_runtime_probe
+  - cmake_project
+  - graphics_runtime
+  - scene_runtime
+  - compile_engine
+  unsupported_claims:
+  - The probe does not create two active directional shadow lights, so it does not
+    directly prove selection of the first active directional light when multiple eligible
+    directional lights are present.
+  - The probe uses one qualifying active caster, so it does not directly prove drawing
+    every qualifying caster when multiple active shadow-casting objects are present.
+  authoring:
+    schema_version: gameforgebench.rubric-authoring.v1
+    contract_fingerprint: 158f6ffdc38b9bf44e745dd3016a18e149c60ca8ddcd4d44118c0ac5f7ed2108
+    task_name: cxx-shadow-pass-lifecycle
+    dimensions_in_rubric:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    controls_required_before_release: true
+  acceptance_mode: runtime_behavior
+  re_authoring_required: false
+  re_authoring_reason: null
+checks:
+- id: oracle_materialization_guard
+  type: file_exists
+  path: .gfb_oracle_applied
+  description: The candidate solution materialization was applied inside the task container.
+- id: implementation_guard
+  type: file_contains
+  path: engine/src/render/graphics.cpp
+  expected: g_frame.events.push_back(render_event::shadow_pass_begin)
+  description: The runtime implementation records the shadow-pass transition.
+- id: cmake_project
+  type: file_exists
+  path: CMakeLists.txt
+  description: The starter remains a buildable C++ engine project.
+- id: graphics_runtime
+  type: file_exists
+  path: engine/src/render/graphics.cpp
+  description: Graphics runtime source exists.
+- id: scene_runtime
+  type: file_exists
+  path: engine/src/scene/scene.cpp
+  description: Scene runtime source exists.
+- id: compile_engine
+  type: command
+  command: g++ -std=c++17 -Wall -Wextra -pedantic -Iengine/include -c engine/src/render/graphics.cpp
+    -o /tmp/gfb_shadow_graphics.o && g++ -std=c++17 -Wall -Wextra -pedantic -Iengine/include
+    -c engine/src/scene/scene.cpp -o /tmp/gfb_shadow_scene.o
+  expected: exit_code=0
+  description: Both engine translation units compile cleanly with C++17 warnings enabled.
+- id: shadow_runtime_probe
+  type: cpp_probe
+  path: engine/src/render/graphics.cpp
+  timeout: 120
+  expected: CPP_SHADOW_RUNTIME_OK
+  description: A verifier-owned native probe checks the complete shadow lifecycle,
+    event order, duplicate callbacks, invalid operations, and frame isolation.
+- id: shadow_selection_probe
+  type: cpp_probe
+  path: engine/src/scene/scene.cpp
+  timeout: 120
+  expected: CPP_SHADOW_SELECTION_OK
+  description: Native runtime verifies first-eligible directional-light selection
+    and counts every active shadow caster.
+  probe_script: "#include \"engine/include/kay/scene/scene.h\"\n#include \"engine/src/scene/scene.cpp\"\
+    \n#include <cmath>\n#include <iostream>\n#include <vector>\n\nusing kay::frame_snapshot;\n\
+    using kay::light_type;\nusing kay::matrix4x4;\nusing kay::render_event;\nusing\
+    \ kay::scene;\nusing kay::scene_light;\nusing kay::shadow_caster;\nusing kay::shadow_params;\n\
+    \nstatic bool close(float a, float b) { return std::fabs(a - b) < 0.00001f; }\n\
+    \nstatic bool events_equal(const frame_snapshot& value, const std::vector<render_event>&\
+    \ expected) {\n    return value.events == expected;\n}\n\nint main() {\n    scene\
+    \ world;\n    scene_light point{};\n    point.index = 2;\n    point.type = light_type::point;\n\
+    \    point.active = true;\n    point.casts_shadows = true;\n    world.add_light(point);\n\
+    \n    scene_light sun{};\n    sun.index = 7;\n    sun.type = light_type::directional;\n\
+    \    sun.active = true;\n    sun.casts_shadows = true;\n    sun.shadow_vp = matrix4x4::identity();\n\
+    \    sun.shadow_vp.m[12] = 4.0f;\n    sun.shadow = shadow_params{0.75f, 0.002f,\
+    \ 1024.0f, 99};\n    world.add_light(sun);\n    world.add_caster(shadow_caster{true,\
+    \ true});\n    world.add_caster(shadow_caster{false, true});\n    world.add_caster(shadow_caster{true,\
+    \ false});\n    world.render();\n\n    frame_snapshot rendered = kay::graphics::snapshot();\n\
+    \    if (rendered.shadow_pass_active || !rendered.shadow_ready) return 10;\n \
+    \   if (rendered.light_index != 7 || rendered.params.light_index != 7) return\
+    \ 11;\n    if (rendered.caster_count != 1 || rendered.lighting_count != 1) return\
+    \ 12;\n    if (!close(rendered.shadow_vp.m[12], 4.0f) || !close(rendered.params.strength,\
+    \ 0.75f)) return 13;\n    if (!events_equal(rendered, {\n        render_event::shadow_pass_begin,\n\
+    \        render_event::shadow_vp_uploaded,\n        render_event::shadow_params_uploaded,\n\
+    \        render_event::shadow_caster_drawn,\n        render_event::shadow_pass_end,\n\
+    \        render_event::lighting_applied,\n    })) return 14;\n\n    scene no_shadow;\n\
+    \    sun.active = false;\n    no_shadow.add_light(sun);\n    no_shadow.add_caster(shadow_caster{true,\
+    \ true});\n    no_shadow.render();\n    frame_snapshot isolated = kay::graphics::snapshot();\n\
+    \    if (isolated.shadow_ready || isolated.shadow_pass_active) return 20;\n  \
+    \  if (isolated.light_index != -1 || isolated.caster_count != 0) return 21;\n\
+    \    if (!events_equal(isolated, {render_event::lighting_applied})) return 22;\n\
+    \n    kay::graphics::reset_frame();\n    kay::graphics::set_shadow_vp(sun.shadow_vp);\n\
+    \    kay::graphics::set_shadow_params(sun.shadow);\n    kay::graphics::draw_shadow_caster();\n\
+    \    kay::graphics::end_shadow_pass();\n    kay::graphics::apply_lights();\n \
+    \   frame_snapshot invalid = kay::graphics::snapshot();\n    if (invalid.shadow_ready\
+    \ || invalid.caster_count != 0 || invalid.light_index != -1) return 30;\n    if\
+    \ (!events_equal(invalid, {render_event::lighting_applied})) return 31;\n\n  \
+    \  kay::graphics::reset_frame();\n    kay::graphics::begin_shadow_pass(3);\n \
+    \   kay::graphics::begin_shadow_pass(9);\n    kay::graphics::set_shadow_vp(sun.shadow_vp);\n\
+    \    kay::graphics::set_shadow_params(sun.shadow);\n    kay::graphics::draw_shadow_caster();\n\
+    \    kay::graphics::end_shadow_pass();\n    kay::graphics::end_shadow_pass();\n\
+    \    kay::graphics::apply_lights();\n    frame_snapshot duplicate = kay::graphics::snapshot();\n\
+    \    if (!duplicate.shadow_ready || duplicate.shadow_pass_active) return 40;\n\
+    \    if (duplicate.light_index != 3 || duplicate.params.light_index != 3) return\
+    \ 41;\n    if (duplicate.events.size() != 6 || duplicate.lighting_count != 1)\
+    \ return 42;\n\n    std::cout << \"CPP_SHADOW_RUNTIME_OK\\n\";\n    return 0;\n\
+    }\n"

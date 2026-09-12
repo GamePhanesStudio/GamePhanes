@@ -1,0 +1,4 @@
+name: ChairCollisionFix
+version: 1.0.0
+main: com.gameforge.chair.ChairPlugin
+api-version: '1.20'

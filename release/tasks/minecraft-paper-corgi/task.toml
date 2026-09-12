@@ -1,0 +1,32 @@
+schema_version = "1.1"
+engine = "minecraft-paper"
+artifacts = [
+    "/app/src/",
+]
+
+[task]
+name = "gameforgebench/gameforgebench-041-history-c0048736edcb0c27490de5e4b4d6e55822955975"
+description = "Repair a Paper 1.20.4 Corgi and park plugin so native entities, park furniture and interaction state remain server-authoritative."
+
+[metadata]
+difficulty = "medium"
+category = "game-development"
+tags = ["minecraft", "paper", "java", "plugin", "state-machine"]
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240
+
+[verifier.environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240

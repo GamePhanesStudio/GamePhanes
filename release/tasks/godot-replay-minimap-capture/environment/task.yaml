@@ -1,0 +1,30 @@
+name: godot-replay-minimap-capture-timing
+description: Repair replay minimap layering, responsive HUD height and screenshot
+  timing.
+runtime_adapter: godot
+real_behavior_contract:
+  starter_object: Main.tscn ReplayCamera CanvasLayer and scripts/replay_ui.gd ReplayUi
+    HUD controller
+  multi_step_events:
+  - instantiate UI -> evaluate large and small viewport safe-area layouts
+  - begin capture -> inspect hidden state -> finish capture -> inspect restored state
+  state_transition: capture_pending transitions false -> true -> false while screenshot-only
+    HUD visibility is suppressed and restored
+  boundary_behavior: small viewport height contracts below the desktop height and
+    transition progress remains within its duration
+  observation: Godot headless probe observes native scene nodes, computed layout values,
+    transition alpha, and capture snapshots
+  runtime_adapter: godot
+deliverables:
+- Main.tscn
+- scripts/replay_ui.gd
+validation:
+- Godot parses headlessly
+- hidden runtime probe passes
+version: 3
+authoring:
+  schema_version: gameforgebench.authoring-pass.v1
+  contract_fingerprint: 827c05366749559c8d9f9feb46432403b4478530b43456a1fc8f4ae9ede5cf51
+  contract_status: task_specific_runtime_contract
+  controls_status: pending_after_authoring_change
+  source: canonical status.tsv row

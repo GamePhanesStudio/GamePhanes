@@ -1,0 +1,37 @@
+name: godot-grenade-throw-and-smoke-lifecycle
+version: 7
+description: Implement a native Godot grenade projectile, burn-pool validation, and
+  smoke extinguish lifecycle.
+runtime_adapter: godot
+real_behavior_contract:
+  starter_object: Main.tscn Godot scene with a GrenadePhysics Node child that owns
+    projectile, burn-pool, and smoke lifecycle state
+  multi_step_events:
+  - load Main.tscn and obtain the GrenadePhysics child node
+  - create a grenade -> advance it by a fixed delta -> observe its moved position
+  - create a valid burn pool -> advance before and at its duration -> observe active
+    then inactive
+  - try non-positive speed, radius, duration, and delta -> verify no invalid state
+    is created or advanced
+  state_transition: a projectile moves from origin and a burn pool changes active
+    to inactive exactly at its duration; smoke changes active to extinguished at its
+    lifetime
+  boundary_behavior: non-positive speed/radius/duration are rejected and non-positive
+    delta does not advance state
+  observation: Godot headless loads Main.tscn, drives the native GrenadePhysics scene
+    node through ordered calls, and observes its runtime dictionaries
+  runtime_adapter: godot
+deliverables:
+- Main.tscn
+- project.godot
+- scripts/grenade_physics.gd
+- scripts/main.gd
+validation:
+- Godot parses headlessly
+- hidden native scene lifecycle probe passes
+authoring:
+  schema_version: gameforgebench.authoring-pass.v1
+  contract_fingerprint: 7772e5ab892b8b49ca342b4701e305a4a47bafbdb53768c713c00cc5132d4ae1
+  contract_status: task_specific_runtime_contract
+  controls_status: pending_after_authoring_change
+  source: canonical status.tsv row

@@ -1,0 +1,31 @@
+name: godot-scene-run-plugin-recovery
+version: 8
+description: Implement a Godot scene_run manager with PackedScene execution gating,
+  crash-lock recovery, and isolated runtime snapshots.
+runtime_adapter: godot
+real_behavior_contract:
+  starter_object: Main.tscn Godot scene with SceneRunManager plugin-style scene execution
+    and crash recovery component
+  multi_step_events:
+  - instantiate manager -> enable tool -> run a valid tscn scene twice
+  - reject disabled/invalid paths -> create stale lock -> recover -> mutate snapshot
+  state_transition: scene execution count increases only while enabled and recovery
+    clears a stale lock
+  boundary_behavior: disabled manager and non-tscn paths are rejected; recovery with
+    no lock is safe and idempotent
+  observation: Godot headless probe observes native scene startup, execution count
+    and filesystem lock cleanup
+  runtime_adapter: godot
+deliverables:
+- Main.tscn
+- scripts/scene_run_manager.gd
+validation:
+- Godot imports and parses headlessly
+- hidden PackedScene, lifecycle, boundary, recovery, and snapshot probes pass
+- Harbor 0.22.0 runs the bundle on Linux amd64 with no runtime network access
+authoring:
+  schema_version: gameforgebench.authoring-pass.v1
+  contract_fingerprint: a391b375a9ceb9496a321521ccf406b83ea74521670d170583d30204d478f876
+  contract_status: task_specific_runtime_contract
+  controls_status: pending_after_authoring_change
+  source: canonical status.tsv row

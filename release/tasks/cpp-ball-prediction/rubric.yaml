@@ -1,0 +1,144 @@
+version: 4
+real_behavior_contract:
+  starter_object: C++ game-physics project with Prediction ball collision state, spin
+    and overlap separation
+  multi_step_events:
+  - load probe case -> run a ball-ball collision response
+  - separate overlapping balls -> transfer spin -> observe predicted endpoint
+  state_transition: collision changes ball positions and transfers angular state before
+    the next prediction step
+  boundary_behavior: overlap is resolved before continuing and spin is exchanged deterministically
+    rather than silently discarded
+  observation: C++ adapter compiles the native physics header and observes runtime
+    positions and spin values
+  runtime_adapter: cpp
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  task_specificity: unique_runtime_contract
+  task_contract:
+    goal: Repair the C++ ball-ball prediction response so spin transfer and overlap
+      separation prevent post-shot drift from the predicted line, while preserving
+      the remaining mechanics.
+    starter_object: A C++ game-physics project containing Prediction ball-collision
+      state, spin, and overlap separation.
+    event_sequence:
+    - Load data/probe_case.txt.
+    - Run the ball-ball collision response.
+    - Separate overlapping balls.
+    - Transfer spin.
+    - Observe the resulting predicted endpoint and spin values before the next prediction
+      step.
+    state_transition: The collision response changes ball positions and transfers
+      angular state before the next prediction step.
+    boundary_behavior: Overlapping balls are separated before continuing, and spin
+      is exchanged deterministically rather than silently discarded.
+    runtime_observation: The C++ probe observes the positions and spin values of two
+      Ball instances after Prediction::run.
+    runtime_adapter: cpp
+  checks:
+  - id: prediction_semantic_probe
+    mode: runtime
+    weight: 1.0
+    dimensions:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    rationale: The verifier-owned C++ probe compiles src/Prediction.h, runs Prediction::run
+      on two overlapping-or-contacting Ball instances, requires separation greater
+      than 1.0, and requires the expected spin transfer from a.spin of 0.18 to b.spin
+      of 0.1782 with a.spin reduced to zero.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - prediction_semantic_probe
+    boundary_behavior:
+      required: true
+      check_ids:
+      - prediction_semantic_probe
+    runtime_observation:
+      required: true
+      check_ids:
+      - prediction_semantic_probe
+  no_op_requirement:
+    required: true
+    description: A submission must produce the verified position separation and spin-transfer
+      state; unchanged or nonfunctional prediction logic must not satisfy the runtime
+      check.
+  static_checks_role:
+    description: The supplied static checks are not usable as rubric checks under
+      the runtime-backed-check restriction. They only establish file presence and
+      text patterns and do not prove the requested endpoint behavior or build-and-run
+      command.
+  evidence_basis:
+  - The task manifest specifies ball-ball collision response, overlap separation,
+    spin transfer, and observation of runtime positions and spin values.
+  - The available runtime probe directly checks Prediction::run, post-response separation,
+    and exact spin values.
+  - The verification command is specified by the manifest but no supplied runtime-backed
+    check executes the build command or validates its endpoint output.
+  unsupported_claims:
+  - The available probe does not observe or compare the final predicted endpoint with
+    a reference post-shot line.
+  - The available probe does not verify that post-shot drift is prevented over a subsequent
+    prediction step.
+  - The available probe does not verify the complete multi-step sequence described
+    in the manifest, including loading data/probe_case.txt and running the built pool_predictor
+    executable.
+  - The available probe does not verify preservation of the remaining mechanics.
+  - The available runtime-backed checks do not verify ROOT_CAUSE.txt or whether the
+    report ties spin to line drift.
+  - The available runtime-backed checks do not verify the presence of data/CMakeLists.txt
+    or data/probe_case.txt.
+  - The available runtime-backed checks do not independently establish that the observed
+    spin values represent the reference engine's deterministic exchange beyond the
+    probe's hard-coded expected values.
+  authoring:
+    schema_version: gameforgebench.rubric-authoring.v1
+    contract_fingerprint: ca0569f4586570649ae593dd82602f10d9f14a2467fb6a1e62110e070edd2ba1
+    task_name: pool-prediction-spin-transfer
+    dimensions_in_rubric:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    controls_required_before_release: true
+  acceptance_mode: runtime_behavior
+  re_authoring_required: false
+  re_authoring_reason: null
+checks:
+- id: prediction_file_present
+  type: file_exists
+  path: src/Prediction.h
+  description: Prediction module file must exist.
+- id: root_cause_report_present
+  type: file_exists
+  path: ROOT_CAUSE.txt
+  description: A short root-cause report must be delivered.
+- id: root_cause_mentions_spin
+  type: file_contains
+  path: ROOT_CAUSE.txt
+  expected: spin
+  description: Report must mention spin as part of the defect or fix.
+- id: root_cause_mentions_drift
+  type: file_regex
+  path: ROOT_CAUSE.txt
+  expected: drift.*line
+  description: Report must connect the bug to post-shot drift away from the line.
+- id: prediction_mentions_spin_transfer
+  type: file_regex
+  path: src/Prediction.h
+  expected: spin.*(swap|transfer)
+  description: Prediction logic should address spin handling in ball-ball collision
+    resolution.
+- id: prediction_semantic_probe
+  type: cpp_probe
+  path: src/Prediction.h
+  expected: CPP_PREDICTION_PROBE_OK
+  probe_script: "#include \"src/Prediction.h\"\n#include <cmath>\n#include <iostream>\n\
+    int main() {\n  Ball a{{0.0, 0.0}, {0.28, 0.0}, 0.18};\n  Ball b{{0.95, 0.0},\
+    \ {0.0, 0.0}, 0.0};\n  Prediction::run(a, b, 1);\n  const double separation =\
+    \ std::hypot(a.pos.x - b.pos.x, a.pos.y - b.pos.y);\n  if (separation <= 1.0)\
+    \ return 2;\n  if (std::abs(a.spin) > 1e-9 || std::abs(b.spin - 0.1782) > 1e-9)\
+    \ return 3;\n  std::cout << \"CPP_PREDICTION_PROBE_OK\\n\";\n  return 0;\n}\n"
+  description: A verifier-owned C++ probe checks collision separation and spin transfer
+    at runtime.

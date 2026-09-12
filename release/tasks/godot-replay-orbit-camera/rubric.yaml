@@ -1,0 +1,105 @@
+version: 4
+real_behavior_contract:
+  starter_object: ReplayCamera (Camera3D) driven by scripts/orbit_camera.gd OrbitCamera
+    controller that rotates by raw-pixel rotate_speed_px
+  multi_step_events:
+  - expose density-independent rotate_speed_dp -> drag the same physical distance
+    at 160 DPI and at 520 DPI -> observe equal rotation
+  - drag right -> reset yaw -> snapshot
+  state_transition: native camera yaw follows the same physical drag equally across
+    160 and 520 DPI, rotates in the finger's direction, and resets to zero
+  boundary_behavior: a rightward drag increases yaw; a sub-baseline DPI and a reset
+    are safe; snapshot is a stable copy that cannot mutate camera state
+  observation: native Godot headless probe reads rotate_speed_dp, the drag deltas for
+    two DPI values, yaw, and snapshot isolation
+  runtime_adapter: godot
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  task_specificity: unique_runtime_contract
+  task_contract:
+    goal: Make the replay orbit camera use density-independent rotation sensitivity,
+      make a rightward drag turn yaw positive (view follows the finger), and keep the
+      existing reset_yaw/snapshot surface stable.
+    starter_object: Main.tscn ReplayCamera Camera3D plus scripts/orbit_camera.gd.
+    event_sequence:
+    - Load OrbitCamera (a Camera3D subclass) from scripts/orbit_camera.gd.
+    - Confirm the default sensitivity rotate_speed_dp is ~0.0035.
+    - Feed the same ~10 mm physical drag expressed in raw pixels at 160 DPI and at
+      520 DPI and require equal drag_delta.
+    - Apply a rightward drag and require yaw to increase.
+    - Mutate a returned snapshot() copy and require the camera's own yaw to stay intact.
+    state_transition: The same physical drag yields the same rotation angle at both
+      densities; a rightward drag raises yaw; yaw can still go back to 0 via reset.
+    boundary_behavior: A zero/absent DPI falls back to a baseline; snapshot isolation
+      holds; the reset interface returns yaw to zero without error.
+    runtime_observation: The probe inspects the exported rate, drag_delta outputs at
+      two densities, apply_drag yaw sign, and snapshot isolation on the Camera3D subclass.
+    runtime_adapter: godot
+  checks:
+  - id: orbit_camera_gestures_runtime
+    mode: runtime
+    weight: 1.0
+    dimensions:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    rationale: The existing Godot probe instantiates Main.tscn (binds the fixed
+      ReplayCamera Camera3D, not a free preload) and exercises the exported
+      DPI-independent default, equal deltas for equal physical distance at 160/520 DPI,
+      rightward yaw increase on the in-scene camera, reset-to-zero, and snapshot
+      isolation on the real controller node.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - orbit_camera_gestures_runtime
+    boundary_behavior:
+      required: true
+      check_ids:
+      - orbit_camera_gestures_runtime
+    runtime_observation:
+      required: true
+      check_ids:
+      - orbit_camera_gestures_runtime
+  no_op_requirement:
+    required: true
+    description: A correct fix must change the runtime behavior of rotate-sensitivity
+     /Drag direction in scripts/orbit_camera.gd; a documentation-only solution fails.
+  static_checks_role:
+    role: supporting_only
+    description: File/version-keyword checks confirm the intended controller and the
+      density knob are present and the project parses headlessly; they are not runtime.
+  evidence_basis:
+  - The supplied godot probe is the runtime evidence for the default rate, equal physical
+    deltas across densities, positive rightward yaw, and snapshot isolation.
+  - The camera_script / camera_node / dp_sensitivity / headless_parse checks only prove
+    files, scene text, and parse remain in place.
+  unsupported_claims: []
+checks:
+- id: orbit_camera_script
+  type: file_exists
+  path: scripts/orbit_camera.gd
+  description: orbit camera controller exists
+- id: camera_node
+  type: file_contains
+  path: Main.tscn
+  expected: Camera3D
+  description: the replay scene configures the camera node as a Camera3D
+- id: dp_sensitivity
+  type: file_contains
+  path: scripts/orbit_camera.gd
+  expected: rotate_speed_dp
+  description: sensitivity is exposed as a density-independent knob
+- id: headless_parse
+  type: command
+  command: godot --headless --path . --editor --quit
+  expected: exit_code=0
+  description: Godot project parses headlessly
+  path: project.godot
+- id: orbit_camera_gestures_runtime
+  type: godot_probe
+  expected: ORBIT_CAMERA_PROBE_OK
+  timeout: 30
+  path: scripts/orbit_camera.gd
+  description: native runtime verifies DPI-independent sensitivity, drag direction,
+    and snapshot isolation

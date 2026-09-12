@@ -1,0 +1,33 @@
+schema_version = "1.1"
+engine = "godot"
+artifacts = [
+    "/app/Main.tscn",
+    "/app/project.godot",
+    "/app/scripts/",
+]
+
+[task]
+name = "gameforgebench/gameforgebench-012-c9d3135f-d8af-4f47-a815-38f0b4e3efd8"
+description = "Fix replay orbit camera drag direction and make rotation sensitivity DPI independent."
+
+[metadata]
+difficulty = "unknown"
+category = "game-development"
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240
+
+[verifier.environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240
