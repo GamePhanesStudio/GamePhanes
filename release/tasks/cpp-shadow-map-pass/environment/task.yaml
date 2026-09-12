@@ -1,0 +1,43 @@
+name: cxx-shadow-pass-lifecycle
+description: Implement a deterministic shadow-map pass in a C++ game-engine scene
+  and graphics runtime.
+engine: cpp
+runtime_adapter: cpp
+difficulty: hard
+deliverables:
+- engine/include/kay/render/graphics.h
+- engine/include/kay/scene/scene.h
+- engine/src/render/graphics.cpp
+- engine/src/scene/scene.cpp
+verification:
+  command: cmake -S . -B build && cmake --build build
+constraints:
+- keep the public starter API compatible
+- do not modify verifier-owned files
+version: 3
+authoring:
+  schema_version: gameforgebench.authoring-pass.v1
+  contract_fingerprint: 158f6ffdc38b9bf44e745dd3016a18e149c60ca8ddcd4d44118c0ac5f7ed2108
+  contract_status: task_specific_runtime_contract
+  controls_status: pending_after_authoring_change
+  source: canonical status.tsv row
+real_behavior_contract:
+  starter_object: C++ game-engine scene with directional lights, shadow-casting scene
+    objects, and graphics frame state
+  multi_step_events:
+  - reset frame -> select active directional shadow light -> begin shadow pass ->
+    upload VP matrix and parameters
+  - draw active shadow casters -> end shadow pass -> apply lighting -> observe the
+    frame snapshot
+  - reset again -> render a scene without a valid shadow light -> confirm prior shadow
+    state is isolated
+  state_transition: the graphics runtime moves from idle to an active shadow pass,
+    becomes shadow-ready after valid uploads and a caster draw, then returns to idle
+    before lighting
+  boundary_behavior: duplicate begin/end calls and operations outside an active pass
+    are ignored; inactive or non-shadow objects do not contribute; reset prevents
+    stale state reuse
+  observation: a verifier-owned C++ probe compiles the engine sources and observes
+    the ordered render-event stream, uploaded state, caster count, readiness, and
+    frame isolation
+  runtime_adapter: cpp

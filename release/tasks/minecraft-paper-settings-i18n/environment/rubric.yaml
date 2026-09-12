@@ -1,0 +1,189 @@
+version: 13
+real_behavior_contract:
+  starter_object: Paper JavaPlugin with native nine-slot settings inventories and
+    packaged locale resources
+  multi_step_events:
+  - compile the candidate plugin and package locale resources into a jar
+  - start Paper and connect ProbeAlice and ProbeBob
+  - open settings for both players and inspect native ItemStack labels
+  - switch en_us to ru_ru and observe both existing views update
+  - exercise unknown locale, missing key, reload, and disable boundaries
+  state_transition: two live inventory views change from English to Russian and then
+    close/reset on reload or disable
+  boundary_behavior: unknown locale and missing key are non-mutating; repeated lifecycle
+    cleanup does not leak views
+  observation: Paper JVM and protocol clients observe actual inventories, item materials,
+    display names, and cleanup
+  runtime_adapter: minecraft
+  source_fidelity_scope: Paper runtime re-authoring of the source Fabric settings-localization
+    intent
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  acceptance_mode: runtime_behavior
+  task_specificity: unique_runtime_contract
+  task_contract:
+    goal: Make a Paper settings inventory load locale resources and update live views
+      safely.
+    starter_object: Native Paper JavaPlugin settings inventory with locale resource
+      files
+    event_sequence:
+    - compile_plugin
+    - connect_two_players
+    - open_inventory
+    - switch_locale
+    - reject_invalid_locale
+    - reload_and_disable
+    state_transition: en_us labels become ru_ru labels for both viewers, then all
+      views close and state clears
+    boundary_behavior: invalid locale/missing key, repeated start, reload, and disable
+      are safe
+    runtime_observation: Paper player inventories and packaged resource lookup are
+      inspected by the hidden JVM probe
+    runtime_adapter: minecraft
+  checks:
+  - id: resource_files
+    mode: static_support
+    weight: 0.25
+    dimensions:
+    - runtime_observation
+    rationale: Both locale resource files are required inputs to the native plugin
+      runtime.
+  - id: resource_values
+    mode: static_support
+    weight: 0.25
+    dimensions:
+    - runtime_observation
+    - state_transition
+    rationale: The Russian resource provides the translated labels observed after
+      a runtime locale transition.
+  - id: lifecycle_gui
+    mode: paper_server_event_probe
+    weight: 1.0
+    dimensions:
+    - runtime_observation
+    - state_transition
+    - boundary_behavior
+    rationale: The probe opens a real Paper inventory for both online players and
+      checks initial labels/materials.
+  - id: locale_transition
+    mode: paper_server_event_probe
+    weight: 1.0
+    dimensions:
+    - runtime_observation
+    - state_transition
+    rationale: The probe switches locale and inspects already-open native views.
+  - id: boundary_locale
+    mode: paper_server_event_probe
+    weight: 1.0
+    dimensions:
+    - runtime_observation
+    - boundary_behavior
+    rationale: Unknown locale and missing key must not mutate active inventory state.
+  - id: two_player_views
+    mode: paper_server_event_probe
+    weight: 1.0
+    dimensions:
+    - runtime_observation
+    - state_transition
+    - boundary_behavior
+    rationale: Two independent online players must each receive and observe their
+      own view.
+  - id: reload_cleanup
+    mode: paper_server_event_probe
+    weight: 1.0
+    dimensions:
+    - runtime_observation
+    - state_transition
+    - boundary_behavior
+    - lifecycle_persistence
+    rationale: Reload closes views and clears locale/session state.
+  - id: disable_lifecycle
+    mode: paper_server_event_probe
+    weight: 1.0
+    dimensions:
+    - runtime_observation
+    - state_transition
+    - boundary_behavior
+    - lifecycle_persistence
+    rationale: Plugin disable must close all views and clear state.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - lifecycle_gui
+      - locale_transition
+      - two_player_views
+      - reload_cleanup
+      - disable_lifecycle
+    boundary_behavior:
+      required: true
+      check_ids:
+      - lifecycle_gui
+      - boundary_locale
+      - two_player_views
+      - reload_cleanup
+      - disable_lifecycle
+    runtime_observation:
+      required: true
+      check_ids:
+      - lifecycle_gui
+      - locale_transition
+      - boundary_locale
+      - two_player_views
+      - reload_cleanup
+      - disable_lifecycle
+    lifecycle_persistence:
+      required: true
+      check_ids:
+      - reload_cleanup
+      - disable_lifecycle
+  no_op_requirement: At least one native behavior check must fail for the untouched
+    stub.
+  static_checks_role: Supporting evidence only; runtime checks carry the behavior
+    score.
+  evidence_basis:
+  - Paper probe observes native inventory contents and ItemStack display names.
+  - Locale resource checks ensure translations are packaged rather than only hard-coded.
+  - The sequence includes two viewers, invalid input, reload, and disable boundaries.
+  authoring:
+    schema_version: gameforgebench.rubric-authoring.v1
+    contract_fingerprint: acfead29ce76c229fb2ea3c8b94829673d1da608585371356c6d84c17afbecdb
+    task_name: minecraft-paper-localized-settings
+    dimensions_in_rubric:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    controls_required_before_release: true
+  re_authoring_required: false
+  re_authoring_reason: null
+checks:
+- id: resource_files
+  type: file_exists
+  path: src/main/resources/lang/en_us.properties
+  description: English locale resource is packaged
+- id: resource_values
+  type: file_contains
+  path: src/main/resources/lang/ru_ru.properties
+  expected: title=Настройки
+  description: Russian resource contains the translated title
+- id: lifecycle_gui
+  type: paper_server_event_probe
+  description: Native Paper inventory opens for two online players with English labels.
+- id: locale_transition
+  type: paper_server_event_probe
+  description: Switching en_us to ru_ru updates both live inventory views from packaged
+    resources.
+- id: boundary_locale
+  type: paper_server_event_probe
+  description: Unknown locales and missing keys are rejected without mutating the
+    active view.
+- id: two_player_views
+  type: paper_server_event_probe
+  description: Two distinct players receive independent native inventory views that
+    update together.
+- id: reload_cleanup
+  type: paper_server_event_probe
+  description: Reload closes both views and clears locale/session state.
+- id: disable_lifecycle
+  type: paper_server_event_probe
+  description: Plugin disable closes all settings inventories and clears runtime state.

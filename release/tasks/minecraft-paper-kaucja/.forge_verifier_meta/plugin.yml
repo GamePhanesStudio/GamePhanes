@@ -1,0 +1,4 @@
+name: ForgeVerifier
+version: 1.0
+main: ForgePaperVerifier
+api-version: '1.20'

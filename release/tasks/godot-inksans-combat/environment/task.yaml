@@ -1,0 +1,34 @@
+name: godot-ink-sans-fight-port-runtime
+version: 8
+engine: godot
+description: Implement a scene-integrated Ink!sans combat-state slice with damage,
+  death signals, reset, and instance isolation.
+runtime_adapter: godot
+real_behavior_contract:
+  starter_object: Main.tscn Godot scene with an InkSansState Node bound to scripts/ink_sans_state.gd
+  multi_step_events:
+  - load and instantiate Main.tscn -> connect health/death signals -> apply valid
+    damage
+  - reject invalid and post-death hits -> reset twice -> instantiate a second scene
+    -> compare isolated state
+  state_transition: HP moves 100 to 75 to 0 and back to 100 while alive and emitted
+    Godot signals track the transitions
+  boundary_behavior: zero, negative, and post-death damage are rejected; lethal damage
+    clamps at zero; repeated reset is signal-idempotent; snapshots and scene instances
+    are isolated
+  observation: Godot headless probe loads a PackedScene, adds both instances to the
+    SceneTree, observes node state and signals, and frees them
+  runtime_adapter: godot
+deliverables:
+- Main.tscn
+- scripts/ink_sans_state.gd
+validation:
+- Godot imports and parses headlessly
+- hidden scene, signal, lifecycle, and isolation probes pass
+- Harbor 0.22.0 runs the bundle with no runtime network access
+authoring:
+  schema_version: gameforgebench.authoring-pass.v1
+  contract_fingerprint: 9c263ef6c98abbd2d29cff8273a4b109741bbeffac220a5c4748a769ef434d86
+  contract_status: task_specific_runtime_contract
+  controls_status: pending_after_authoring_change
+  source: canonical status.tsv row

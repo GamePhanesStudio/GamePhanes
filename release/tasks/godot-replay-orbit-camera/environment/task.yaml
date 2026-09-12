@@ -1,0 +1,31 @@
+name: godot-replay-orbit-camera-gestures
+description: Fix replay orbit camera drag direction and make rotation sensitivity
+  DPI independent.
+runtime_adapter: godot
+real_behavior_contract:
+  starter_object: Main.tscn Godot scene containing ReplayCamera Camera3D with scripts/orbit_camera.gd
+    OrbitCamera controller
+  multi_step_events:
+  - instantiate camera -> apply drag at 160 DPI -> apply same physical drag at 520
+    DPI
+  - reset yaw -> snapshot
+  state_transition: native Camera3D yaw changes after drag and rotation is reset to
+    zero
+  boundary_behavior: DPI conversion preserves physical-distance sensitivity across
+    densities; reset and snapshot isolate state
+  observation: Godot headless probe reads Camera3D rotation and OrbitCamera snapshot
+    after sequential drag events
+  runtime_adapter: godot
+deliverables:
+- Main.tscn
+- scripts/orbit_camera.gd
+validation:
+- Godot parses headlessly
+- hidden runtime probe passes
+version: 3
+authoring:
+  schema_version: gameforgebench.authoring-pass.v1
+  contract_fingerprint: 4bd38e55bed9b08c9503735b50945023f7b16c9cf676a7eb8d3e60dee3ed2fac
+  contract_status: task_specific_runtime_contract
+  controls_status: pending_after_authoring_change
+  source: canonical status.tsv row

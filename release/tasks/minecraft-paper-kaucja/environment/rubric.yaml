@@ -1,0 +1,206 @@
+version: 7
+real_behavior_contract:
+  starter_object: Paper JavaPlugin Kaucja with real ArmorStand entity, persistent
+    model/texture/animation state and player-triggered lifecycle
+  multi_step_events:
+  - two real players join Paper -> start plugin -> spawn a tagged ArmorStand
+  - apply texture -> change native pose for turn animation -> inspect entity PDC and
+    world state
+  - reject duplicate IDs, blank/oversized textures and unsupported animations without
+    mutating the entity
+  - reload and disable the plugin -> remove all native entities
+  state_transition: Kaucja moves stopped -> running, entity state grows model -> textured
+    -> animated, then reload/disable clears the world
+  boundary_behavior: duplicate IDs, invalid assets, unsupported animations, entity
+    isolation and lifecycle cleanup are checked against real Bukkit entities
+  observation: A real Paper JVM and two online test players observe ArmorStand UUIDs,
+    scoreboard tags, PersistentDataContainer values, pose and entity removal
+  runtime_adapter: minecraft
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  task_specificity: unique_runtime_contract
+  task_contract:
+    goal: 'Implement the native Paper Kaucja visual-state pipeline in KaucjaPlugin.java:
+      start the JavaPlugin lifecycle, spawn a named ArmorStand for an online player,
+      store model, texture, and animation state in the entity persistent data, apply
+      an observable pose for a supported animation, reject invalid requests, isolate
+      entities between players, and remove Kaucja entities on reload or plugin disable.'
+    starter_object: Paper JavaPlugin Kaucja with a native ArmorStand entity model,
+      texture state, and animation state.
+    event_sequence:
+    - Load Kaucja and start the Paper plugin lifecycle.
+    - Spawn one named ArmorStand game entity for an online player.
+    - Apply a nonblank supported texture identifier to the entity.
+    - Play a supported turn animation and observe the native entity pose.
+    - Reject duplicate entity IDs, blank texture identifiers, oversized texture identifiers,
+      and unsupported animation names without corrupting existing entity state.
+    - Create isolated entities for multiple players.
+    - Reload the plugin and clear all Kaucja entity state.
+    - Disable the plugin and remove all Kaucja entities from the world.
+    state_transition: Kaucja transitions from stopped to running; a player's entity
+      state grows from model to textured animated state; reload or disable returns
+      runtime entity state to missing.
+    boundary_behavior: Duplicate entity IDs, blank or oversized texture identifiers,
+      and unsupported animation names are rejected without corrupting an existing
+      native entity. Entity state for one player must remain isolated from another
+      player's entity.
+    runtime_observation: A Paper JVM loads Kaucja, observes the native JavaPlugin
+      lifecycle, finds named tagged ArmorStand entities, reads their persistent model,
+      texture, and animation state, observes a native pose change for a supported
+      animation, and verifies entity removal after reload or disable.
+    runtime_adapter: minecraft
+  checks:
+  - id: lifecycle_spawn
+    mode: paper_server_event_probe
+    weight: 1
+    dimensions:
+    - state_transition
+    - runtime_observation
+    rationale: Intended to verify that the native Paper lifecycle spawns a unique
+      tagged ArmorStand for a player, but the supplied probe has no executable script
+      or expected result.
+  - id: texture_animation
+    mode: paper_server_event_probe
+    weight: 1
+    dimensions:
+    - state_transition
+    - runtime_observation
+    rationale: Intended to verify texture and animation state on the real entity and
+      a native pose change, but the supplied probe has no executable script or expected
+      result.
+  - id: boundary_isolation
+    mode: paper_server_event_probe
+    weight: 1
+    dimensions:
+    - boundary_behavior
+    - runtime_observation
+    rationale: Intended to verify rejection of invalid assets and duplicate or blank
+      IDs without corrupting an existing entity, but the supplied probe has no executable
+      script or expected result.
+  - id: multi_entity_runtime
+    mode: paper_server_event_probe
+    weight: 1
+    dimensions:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    rationale: Intended to verify distinct native entities and isolated state for
+      two players, but the supplied probe has no executable script or expected result.
+  - id: reload_cleanup
+    mode: paper_server_event_probe
+    weight: 1
+    dimensions:
+    - state_transition
+    - runtime_observation
+    rationale: Intended to verify that explicit reload removes the real entity and
+      permits a clean restart, but the supplied probe has no executable script or
+      expected result.
+  - id: disable_lifecycle
+    mode: paper_server_event_probe
+    weight: 1
+    dimensions:
+    - state_transition
+    - runtime_observation
+    rationale: Intended to verify that plugin disable removes all Kaucja entities
+      from the world, but the supplied probe has no executable script or expected
+      result.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - lifecycle_spawn
+      - texture_animation
+      - multi_entity_runtime
+      - reload_cleanup
+      - disable_lifecycle
+    boundary_behavior:
+      required: true
+      check_ids:
+      - boundary_isolation
+      - multi_entity_runtime
+    runtime_observation:
+      required: true
+      check_ids:
+      - lifecycle_spawn
+      - texture_animation
+      - boundary_isolation
+      - multi_entity_runtime
+      - reload_cleanup
+      - disable_lifecycle
+  no_op_requirement: A no-op, report-only change, standalone Java simulator, or implementation
+    without native Paper lifecycle and Bukkit entity operations must not receive credit.
+    The supplied checks cannot currently enforce this because every probe_script is
+    empty and every expected value is null.
+  static_checks_role: Static checks may confirm that the declared deliverables exist
+    and preserve the public KaucjaPlugin class and SOURCE_TAG, but they are not sufficient
+    evidence for native Paper lifecycle behavior, persistent entity state, pose changes,
+    rejection behavior, player isolation, reload cleanup, or disable cleanup.
+  evidence_basis:
+    source_files:
+    - src/main/java/com/gameforge/kaucja/KaucjaPlugin.java
+    - src/main/resources/plugin.yml
+    runtime_adapter: minecraft
+    available_runtime_checks:
+    - lifecycle_spawn
+    - texture_animation
+    - boundary_isolation
+    - multi_entity_runtime
+    - reload_cleanup
+    - disable_lifecycle
+    probe_status: All supplied checks are paper_server_event_probe checks with path
+      null, expected null, and an empty probe_script. No executable runtime evidence
+      is available.
+  unsupported_claims:
+  - The current probes cannot prove that KaucjaPlugin starts or completes the native
+    Paper JavaPlugin lifecycle.
+  - The current probes cannot prove that a named ArmorStand is spawned for an online
+    player.
+  - The current probes cannot prove that the entity is tagged or that model, texture,
+    and animation state are stored in persistent data.
+  - The current probes cannot prove that a texture is applied or that blank and oversized
+    texture identifiers are rejected.
+  - The current probes cannot prove that a supported turn animation is accepted or
+    that the native entity pose changes.
+  - The current probes cannot prove that unsupported animation names are rejected
+    without corrupting existing state.
+  - The current probes cannot prove that duplicate entity IDs are rejected.
+  - The current probes cannot prove that entities are isolated between multiple players.
+  - The current probes cannot prove that reload clears runtime entity state or permits
+    a clean restart.
+  - The current probes cannot prove that plugin disable removes all Kaucja entities
+    from the world.
+  - The current probes cannot prove preservation of SOURCE_TAG, the public class,
+    plugin.yml contents, or Paper API compatibility.
+  authoring:
+    schema_version: gameforgebench.rubric-authoring.v1
+    contract_fingerprint: 8f56738abab8ecb55dcb16484e3cf818a8489a18d2b348664087da9909e674cd
+    task_name: minecraft-paper-kaucja-entity-visuals
+    dimensions_in_rubric:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    controls_required_before_release: true
+  acceptance_mode: runtime_behavior
+  re_authoring_required: false
+  re_authoring_reason: null
+checks:
+- id: lifecycle_spawn
+  type: paper_server_event_probe
+  description: Native Kaucja lifecycle spawns a unique tagged ArmorStand for a player.
+- id: texture_animation
+  type: paper_server_event_probe
+  description: Texture and animation state are stored on the real entity and its native
+    pose changes.
+- id: boundary_isolation
+  type: paper_server_event_probe
+  description: Invalid assets and duplicate/blank IDs are rejected without corrupting
+    an existing entity.
+- id: multi_entity_runtime
+  type: paper_server_event_probe
+  description: Two players receive distinct native entities and isolated state.
+- id: reload_cleanup
+  type: paper_server_event_probe
+  description: Explicit reload removes the real entity and permits a clean restart.
+- id: disable_lifecycle
+  type: paper_server_event_probe
+  description: Paper plugin disable removes all Kaucja entities from the world.

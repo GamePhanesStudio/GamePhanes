@@ -1,0 +1,145 @@
+version: 8
+real_behavior_contract:
+  starter_object: Main.tscn Godot scene with an InkSansState Node bound to scripts/ink_sans_state.gd
+  multi_step_events: &id001
+  - load and instantiate Main.tscn -> connect health/death signals -> apply valid
+    damage
+  - reject invalid and post-death hits -> reset twice -> instantiate a second scene
+    -> compare isolated state
+  state_transition: HP moves 100 to 75 to 0 and back to 100 while alive and emitted
+    Godot signals track the transitions
+  boundary_behavior: zero, negative, and post-death damage are rejected; lethal damage
+    clamps at zero; repeated reset is signal-idempotent; snapshots and scene instances
+    are isolated
+  observation: Godot headless probe loads a PackedScene, adds both instances to the
+    SceneTree, observes node state and signals, and frees them
+  runtime_adapter: godot
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  acceptance_mode: runtime_behavior
+  task_specificity: unique_runtime_contract
+  re_authoring_required: false
+  re_authoring_reason: null
+  task_contract:
+    goal: Implement the scene-integrated combat-state slice used by the Ink!sans Fight
+      port, including health/death signals and independent scene instances.
+    starter_object: Main.tscn Godot scene with an InkSansState Node bound to scripts/ink_sans_state.gd
+    event_sequence: *id001
+    state_transition: HP moves 100 to 75 to 0 and back to 100 while alive and emitted
+      Godot signals track the transitions
+    boundary_behavior: zero, negative, and post-death damage are rejected; lethal
+      damage clamps at zero; repeated reset is signal-idempotent; snapshots and scene
+      instances are isolated
+    runtime_observation: Godot headless probe loads a PackedScene, adds both instances
+      to the SceneTree, observes node state and signals, and frees them
+    runtime_adapter: godot
+  checks:
+  - id: ink_sans_scene_probe
+    mode: runtime
+    weight: 1.0
+    dimensions:
+    - runtime_observation
+    - boundary_behavior
+    - state_transition
+    - lifecycle_persistence
+    path: Main.tscn
+    expected: INK_SANS_SCENE_RUNTIME_OK
+    description: A native Godot scene probe observes damage, signals, death gating,
+      reset idempotency, snapshots, and second-instance isolation.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - ink_sans_scene_probe
+    boundary_behavior:
+      required: true
+      check_ids:
+      - ink_sans_scene_probe
+    runtime_observation:
+      required: true
+      check_ids:
+      - ink_sans_scene_probe
+    lifecycle_persistence:
+      required: true
+      check_ids:
+      - ink_sans_scene_probe
+  no_op_requirement: at_least_one_behavior_check_fails
+  static_checks_role: supporting_evidence_only
+  unsupported_claims:
+  - This task verifies one combat-state slice, not a complete GameMaker-to-Godot port.
+  - The headless probe does not assess visuals, audio, input feel, boss AI, or full
+    battle sequencing.
+  authoring:
+    schema_version: gameforgebench.rubric-authoring.v1
+    contract_fingerprint: 9c263ef6c98abbd2d29cff8273a4b109741bbeffac220a5c4748a769ef434d86
+    task_name: godot-ink-sans-fight-port-runtime
+    dimensions_in_rubric:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    controls_required_before_release: true
+checks:
+- id: state_script
+  type: file_exists
+  path: scripts/ink_sans_state.gd
+  description: The combat-state script exists.
+- id: scene_component
+  type: file_contains
+  path: Main.tscn
+  expected: '[node name="InkSansState" type="Node" parent="."]'
+  description: Main.tscn declares the named combat-state node; runtime binding is
+    checked separately.
+- id: headless_parse
+  type: command
+  command: godot --headless --path . --editor --quit
+  expected: exit_code=0
+  description: Godot imports and parses the project headlessly.
+  path: Main.tscn
+- id: ink_sans_scene_probe
+  type: godot_probe
+  probe_script: "extends SceneTree\n\nvar health_events: Array = []\nvar defeated_events\
+    \ := 0\n\nfunc _initialize() -> void:\n    call_deferred(\"_run\")\n\nfunc _fail(message:\
+    \ String) -> void:\n    push_error(message)\n    quit(1)\n\nfunc _on_health_changed(previous_hp:\
+    \ int, current_hp: int) -> void:\n    health_events.append([previous_hp, current_hp])\n\
+    \nfunc _on_defeated() -> void:\n    defeated_events += 1\n\nfunc _run() -> void:\n\
+    \    var packed := load(\"res://Main.tscn\") as PackedScene\n    if packed ==\
+    \ null:\n        _fail(\"Main.tscn is not a loadable PackedScene\"); return\n\
+    \    var first := packed.instantiate()\n    root.add_child(first)\n    await process_frame\n\
+    \    var fighter := first.get_node_or_null(\"InkSansState\")\n    if fighter ==\
+    \ null or fighter.get_script() == null:\n        _fail(\"InkSansState scene node\
+    \ is missing its script\"); return\n    if not fighter.has_signal(\"health_changed\"\
+    ) or not fighter.has_signal(\"defeated\"):\n        _fail(\"combat signals are\
+    \ missing\"); return\n    fighter.connect(\"health_changed\", Callable(self, \"\
+    _on_health_changed\"))\n    fighter.connect(\"defeated\", Callable(self, \"_on_defeated\"\
+    ))\n    var initial: Dictionary = fighter.snapshot()\n    if initial != {\"hp\"\
+    : 100, \"max_hp\": 100, \"hits\": 0, \"alive\": true}:\n        _fail(\"initial\
+    \ combat state is invalid\"); return\n    if not fighter.hit(25) or fighter.snapshot().get(\"\
+    hp\") != 75 or fighter.snapshot().get(\"hits\") != 1:\n        _fail(\"valid damage\
+    \ transition failed\"); return\n    if fighter.hit(0) or fighter.hit(-3) or fighter.snapshot().get(\"\
+    hp\") != 75:\n        _fail(\"non-positive damage changed state\"); return\n \
+    \   if not fighter.hit(100) or fighter.alive() or fighter.snapshot().get(\"hp\"\
+    ) != 0:\n        _fail(\"lethal damage did not clamp or update alive state\");\
+    \ return\n    if fighter.hit(1) or fighter.snapshot().get(\"hits\") != 2:\n  \
+    \      _fail(\"post-death damage was accepted\"); return\n    if health_events\
+    \ != [[100, 75], [75, 0]] or defeated_events != 1:\n        _fail(\"health/death\
+    \ signals do not match transitions\"); return\n    var copy: Dictionary = fighter.snapshot()\n\
+    \    copy[\"hp\"] = 999\n    copy[\"hits\"] = 999\n    if fighter.snapshot().get(\"\
+    hp\") != 0 or fighter.snapshot().get(\"hits\") != 2:\n        _fail(\"snapshot\
+    \ aliases internal state\"); return\n    fighter.reset()\n    fighter.reset()\n\
+    \    if fighter.snapshot() != {\"hp\": 100, \"max_hp\": 100, \"hits\": 0, \"alive\"\
+    : true}:\n        _fail(\"reset did not restore the initial state\"); return\n\
+    \    if health_events != [[100, 75], [75, 0], [0, 100]] or defeated_events !=\
+    \ 1:\n        _fail(\"reset emitted duplicate or incorrect signals\"); return\n\
+    \    if not fighter.hit(10):\n        _fail(\"fighter did not accept damage after\
+    \ reset\"); return\n    var second := packed.instantiate()\n    root.add_child(second)\n\
+    \    await process_frame\n    var second_fighter := second.get_node_or_null(\"\
+    InkSansState\")\n    if second_fighter == null or second_fighter.snapshot() !=\
+    \ {\"hp\": 100, \"max_hp\": 100, \"hits\": 0, \"alive\": true}:\n        _fail(\"\
+    second scene instance inherited first-instance state\"); return\n    first.queue_free()\n\
+    \    second.queue_free()\n    await process_frame\n    print(\"INK_SANS_SCENE_RUNTIME_OK\"\
+    )\n    quit(0)\n"
+  expected: INK_SANS_SCENE_RUNTIME_OK
+  description: Native Godot runtime loads Main.tscn, observes combat signals and state
+    transitions, rejects boundary inputs, and verifies snapshot and lifecycle isolation.
+  path: Main.tscn
+  timeout: 60

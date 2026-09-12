@@ -1,0 +1,3 @@
+class CyberEngine { constructor(canvas) { this.canvas=canvas; this.ctx=canvas.getContext('2d'); this.keys={}; this.w=canvas.width; this.h=canvas.height; } start(game) { const loop=()=>{ game.update(1/60,this.keys); game.draw(this.ctx,this.w,this.h); requestAnimationFrame(loop); }; requestAnimationFrame(loop); } }
+if(typeof window!=='undefined') window.CyberEngine=CyberEngine;
+if(typeof module!=='undefined') module.exports={CyberEngine};

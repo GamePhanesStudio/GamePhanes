@@ -1,0 +1,35 @@
+name: pool-prediction-spin-transfer
+description: Repair the C++ ball-ball prediction response so spin transfer and overlap
+  separation prevent post-shot drift from the predicted line.
+engine: cpp
+runtime_adapter: cpp
+real_behavior_contract:
+  starter_object: C++ game-physics project with Prediction ball collision state, spin
+    and overlap separation
+  multi_step_events:
+  - load probe case -> run a ball-ball collision response
+  - separate overlapping balls -> transfer spin -> observe predicted endpoint
+  state_transition: collision changes ball positions and transfers angular state before
+    the next prediction step
+  boundary_behavior: overlap is resolved before continuing and spin is exchanged deterministically
+    rather than silently discarded
+  observation: C++ adapter compiles the native physics header and observes runtime
+    positions and spin values
+  runtime_adapter: cpp
+deliverables: &id001
+- ROOT_CAUSE.txt
+- src/Prediction.h
+entrypoint: src/Prediction.h
+verification_command: cmake --build build && ./build/pool_predictor data/probe_case.txt
+validation:
+- spin is transferred during collision response
+- overlapping balls are separated before the next step
+- the root-cause report ties spin to line drift
+version: 4
+authoring:
+  schema_version: gameforgebench.authoring-pass.v1
+  contract_fingerprint: ca0569f4586570649ae593dd82602f10d9f14a2467fb6a1e62110e070edd2ba1
+  contract_status: task_specific_runtime_contract
+  controls_status: pending_after_authoring_change
+  source: canonical status.tsv row
+allowed_output_paths: *id001

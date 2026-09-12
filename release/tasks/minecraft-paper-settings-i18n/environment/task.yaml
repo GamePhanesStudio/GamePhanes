@@ -1,0 +1,55 @@
+name: minecraft-paper-localized-settings
+version: 13
+engine: minecraft
+runtime_adapter: minecraft
+engine_version: Paper 26.1.2 build 63 / Java 25
+description: Implement the Paper settings inventory so its labels are loaded from
+  locale resources, switch between en_us and ru_ru for live players, and clean up
+  on reload or disable.
+source_intent_anchor: The source trajectory repairs a Minecraft settings screen whose
+  English labels do not follow the active client language; it adds locale resources
+  and dynamic translated labels.
+deliverables:
+- src/main/java/com/gameforge/localization/LocalizationPlugin.java
+- src/main/resources/plugin.yml
+- src/main/resources/lang/en_us.properties
+- src/main/resources/lang/ru_ru.properties
+allowed_output_paths:
+- src/main/java/com/gameforge/localization/LocalizationPlugin.java
+- src/main/resources/plugin.yml
+- src/main/resources/lang/en_us.properties
+- src/main/resources/lang/ru_ru.properties
+forbidden_shortcuts:
+- Do not modify tests, the rubric, task metadata, or verifier-owned paths.
+- Do not implement a standalone Java simulator instead of loading the plugin in Paper.
+- Do not hard-code translated labels as the only source; runtime labels must come
+  from packaged locale resources.
+real_behavior_contract:
+  starter_object: Paper JavaPlugin with native nine-slot settings inventories and
+    packaged locale resources
+  multi_step_events:
+  - compile the candidate plugin and package locale resources into a jar
+  - start Paper and connect ProbeAlice and ProbeBob
+  - open settings for both players and inspect native ItemStack labels
+  - switch en_us to ru_ru and observe both existing views update
+  - exercise unknown locale, missing key, reload, and disable boundaries
+  state_transition: two live inventory views change from English to Russian and then
+    close/reset on reload or disable
+  boundary_behavior: unknown locale and missing key are non-mutating; repeated lifecycle
+    cleanup does not leak views
+  observation: Paper JVM and protocol clients observe actual inventories, item materials,
+    display names, and cleanup
+  runtime_adapter: minecraft
+  source_fidelity_scope: Paper runtime re-authoring of the source Fabric settings-localization
+    intent
+validation:
+- Docker image is public and digest-pinned; runtime has no network access.
+- Candidate Java and properties resources compile into a plugin jar.
+- Hidden Paper probe passes all native event checks and the untouched starter fails
+  behavior checks.
+authoring:
+  schema_version: gameforgebench.authoring-pass.v1
+  contract_fingerprint: acfead29ce76c229fb2ea3c8b94829673d1da608585371356c6d84c17afbecdb
+  contract_status: task_specific_runtime_contract
+  controls_status: pending_after_authoring_change
+  source: canonical status.tsv row

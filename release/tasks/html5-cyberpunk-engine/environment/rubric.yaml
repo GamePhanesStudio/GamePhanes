@@ -1,0 +1,142 @@
+version: 10
+real_behavior_contract:
+  starter_object: index.html HTML5 game scene with engine.js requestAnimationFrame
+    loop, game.js enemy registry and state.js runtime state
+  multi_step_events:
+  - load the browser modules and create a NeonRift game
+  - advance 30 fixed updates to spawn an enemy wave, then draw the game to a real
+    canvas
+  - apply damage and reject an unknown state event without mutation
+  state_transition: fixed updates create enemies, the damage event reduces HP, and
+    the game draw changes canvas pixels
+  boundary_behavior: unknown events do not mutate state, registries retain at least
+    four enemy and three boss types, and a missing canvas context is not accepted
+  observation: Chromium headless executes the browser runtime, observes canvas pixels
+    after CyberEngine drawing, and reads the DOM probe result
+  runtime_adapter: web
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  task_specificity: unique_runtime_contract
+  task_contract:
+    goal: Implement an executable Neon Rift HTML5 game with a browser engine loop,
+      enemy wave spawning, damage state transitions, registries, and visible canvas
+      rendering.
+    starter_object: index.html with canvas#game and src/engine.js, src/game.js, src/state.js
+      modules
+    event_sequence:
+    - load modules -> create game -> advance 30 updates -> draw to canvas -> apply
+      damage -> reject unknown_event -> emit DOM result
+    state_transition: game.enemies becomes non-empty after 30 updates, damage lowers
+      HP from 3 to 2 while mode remains running, and draw modifies canvas pixels
+    boundary_behavior: unknown_event leaves the damaged state unchanged; incomplete
+      enemy/boss registries and a no-op draw fail the runtime contract
+    runtime_observation: Chromium headless executes the modules and inspects native
+      CanvasRenderingContext2D pixel data plus a probe DOM marker
+    runtime_adapter: web
+  checks:
+  - id: runtime_probe
+    mode: runtime
+    weight: 1.0
+    dimensions:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    rationale: The browser probe exercises the complete ordered game update, state,
+      registry, and canvas-rendering sequence.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - runtime_probe
+    boundary_behavior:
+      required: true
+      check_ids:
+      - runtime_probe
+    runtime_observation:
+      required: true
+      check_ids:
+      - runtime_probe
+  no_op_requirement: A starter that lacks executable browser APIs, wave spawning,
+    state transition behavior, or visible canvas output must receive zero reward.
+  static_checks_role: File existence and source markers are supporting evidence only;
+    runtime_probe is the sole behavior-scoring check.
+  evidence_basis:
+  - Chromium executes window.CyberEngine, window.NeonRift, and window.CyberState.
+  - The probe checks enemy/boss registry cardinality, 30 updates, damage and unknown-event
+    behavior, and changed Canvas pixel data.
+  unsupported_claims:
+  - The probe does not require score persistence or page-reload persistence.
+  authoring:
+    schema_version: gameforgebench.rubric-authoring.v1
+    contract_fingerprint: 36624d65e6c6d5806cea980a3180b7334850dff868af400379dd48d748b1af95
+    task_name: neon-rift-cyberpunk
+    dimensions_in_rubric:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    controls_required_before_release: true
+  acceptance_mode: runtime_behavior
+  re_authoring_required: false
+  re_authoring_reason: null
+checks:
+- id: index_exists
+  type: file_exists
+  path: index.html
+  description: HTML entry exists
+- id: engine_exists
+  type: file_exists
+  path: src/engine.js
+  description: engine source exists
+- id: state_exists
+  type: file_exists
+  path: src/state.js
+  description: state module exists
+- id: game_exists
+  type: file_exists
+  path: src/game.js
+  description: game module exists
+- id: engine_loop
+  type: file_contains
+  path: src/engine.js
+  expected: requestAnimationFrame
+  description: engine has a render loop
+- id: boss_types
+  type: file_contains
+  path: src/game.js
+  expected: bossTypes
+  description: game supports boss archetypes
+- id: runtime_probe
+  type: browser_probe
+  path: index.html
+  expected: CYBER_BROWSER_OK
+  probe_sources:
+  - src/engine.js
+  - src/state.js
+  - src/game.js
+  probe_script: "(() => {\n  const fail = (message) => { throw new Error(message);\
+    \ };\n  const assert = (condition, message) => { if (!condition) fail(message);\
+    \ };\n  const api = window.NeonRift;\n  const stateApi = window.CyberState;\n\
+    \  assert(window.CyberEngine && api && stateApi, 'browser runtime APIs missing');\n\
+    \  assert(api.enemyTypes.length >= 4 && api.bossTypes.length >= 3, 'registries\
+    \ incomplete');\n  const game = api.createGame();\n  const initial = game.snapshot\
+    \ ? game.snapshot() : {enemies: game.enemies.length};\n  for (let step = 0; step\
+    \ < 30; step += 1) game.update(1 / 60);\n  assert(game.enemies.length > 0, 'wave\
+    \ did not spawn');\n  const canvas = document.createElement('canvas');\n  canvas.width\
+    \ = 320; canvas.height = 180;\n  document.body.appendChild(canvas);\n  const engine\
+    \ = new window.CyberEngine(canvas);\n  assert(engine.ctx, '2d canvas context missing');\n\
+    \  const beforePixels = engine.ctx.getImageData(0, 0, canvas.width, canvas.height).data;\n\
+    \  game.draw(engine.ctx, canvas.width, canvas.height);\n  const afterPixels =\
+    \ engine.ctx.getImageData(0, 0, canvas.width, canvas.height).data;\n  let changed\
+    \ = false;\n  for (let i = 0; i < beforePixels.length; i += 1) { if (beforePixels[i]\
+    \ !== afterPixels[i]) { changed = true; break; } }\n  assert(changed, 'game draw\
+    \ did not change canvas pixels');\n  const state = stateApi.createState();\n \
+    \ const damaged = stateApi.transition(state, 'damage');\n  assert(damaged.hp ===\
+    \ 2 && damaged.mode === 'running', 'damage transition invalid');\n  const beforeUnknown\
+    \ = JSON.stringify(damaged);\n  stateApi.transition(damaged, 'unknown_event');\n\
+    \  assert(JSON.stringify(damaged) === beforeUnknown, 'unknown event changed state');\n\
+    \  const result = document.createElement('pre');\n  result.id = 'probe-result';\n\
+    \  result.textContent = 'CYBER_BROWSER_OK ' + JSON.stringify({initialEnemies:\
+    \ initial.enemies || 0, spawned: game.enemies.length, hp: damaged.hp, pixelsChanged:\
+    \ changed});\n  document.body.appendChild(result);\n})();\n"
+  description: Chromium executes the browser game and observes a multi-step runtime
+    result in the DOM

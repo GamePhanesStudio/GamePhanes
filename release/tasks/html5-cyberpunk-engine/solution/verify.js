@@ -1,0 +1,1 @@
+const assert=require('assert');const{createGame,enemyTypes,bossTypes}=require('./src/game.js');const{createState,transition}=require('./src/state.js');assert(enemyTypes.length>=4&&bossTypes.length>=3);const game=createGame();for(let i=0;i<30;i++)game.update(1/60);assert(game.enemies.length>0);assert(transition(createState(),'damage').hp===2);console.log("CYBER_RUNTIME_OK");

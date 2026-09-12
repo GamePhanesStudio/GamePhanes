@@ -1,0 +1,93 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource path="res://scripts/main.gd" type="Script" id="1_main"]
+[ext_resource path="res://scripts/player.gd" type="Script" id="2_player"]
+
+[sub_resource type="RectangleShape2D" id="PlayerShape"]
+size = Vector2(24, 28)
+
+[sub_resource type="RectangleShape2D" id="WallShape"]
+size = Vector2(32, 240)
+
+[sub_resource type="RectangleShape2D" id="FloorShape"]
+size = Vector2(880, 24)
+
+[sub_resource type="RectangleShape2D" id="BoundsShape"]
+size = Vector2(960, 24)
+
+[sub_resource type="StyleBoxFlat" id="PanelStyle"]
+bg_color = Color(0.055, 0.075, 0.11, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.3, 0.65, 0.8, 0.9)
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="Background" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(0, 0, 960, 0, 960, 540, 0, 540)
+color = Color(0.035, 0.055, 0.08, 1)
+
+[node name="Floor" type="StaticBody2D" parent="."]
+position = Vector2(480, 470)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Floor"]
+shape = SubResource("FloorShape")
+
+[node name="FloorVisual" type="Polygon2D" parent="Floor"]
+polygon = PackedVector2Array(-440, -12, 440, -12, 440, 12, -440, 12)
+color = Color(0.16, 0.3, 0.33, 1)
+
+[node name="Wall" type="StaticBody2D" parent="."]
+position = Vector2(300, 342)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Wall"]
+shape = SubResource("WallShape")
+
+[node name="WallVisual" type="Polygon2D" parent="Wall"]
+polygon = PackedVector2Array(-16, -120, 16, -120, 16, 120, -16, 120)
+color = Color(0.45, 0.22, 0.22, 1)
+
+[node name="Player" type="CharacterBody2D" parent="."]
+position = Vector2(100, 420)
+script = ExtResource("2_player")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player"]
+shape = SubResource("PlayerShape")
+
+[node name="BodyVisual" type="Polygon2D" parent="Player"]
+polygon = PackedVector2Array(-12, -14, 12, -14, 12, 14, -12, 14)
+color = Color(0.95, 0.75, 0.28, 1)
+
+[node name="Camera2D" type="Camera2D" parent="Player"]
+position = Vector2(0, -80)
+
+[node name="BoundsTop" type="StaticBody2D" parent="."]
+position = Vector2(480, -12)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BoundsTop"]
+shape = SubResource("BoundsShape")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Panel" type="PanelContainer" parent="HUD"]
+offset_left = 18.0
+offset_top = 18.0
+offset_right = 298.0
+offset_bottom = 104.0
+theme_override_styles/panel = SubResource("PanelStyle")
+
+[node name="VBox" type="VBoxContainer" parent="HUD/Panel"]
+theme_override_constants/separation = 4
+
+[node name="Title" type="Label" parent="HUD/Panel/VBox"]
+text = "PIXEL TOWER"
+theme_override_colors/font_color = Color(0.55, 0.9, 1, 1)
+
+[node name="PositionLabel" type="Label" parent="HUD/Panel/VBox"]
+text = "Player: (100, 420)"
+
+[node name="StatusLabel" type="Label" parent="HUD/Panel/VBox"]
+text = "WASD to move"

@@ -1,0 +1,33 @@
+schema_version = "1.1"
+engine = "minecraft-paper"
+artifacts = [
+    "/app/build.sh",
+    "/app/src/",
+]
+
+[task]
+name = "gameforgebench/gameforgebench-057-history-c454ade78b1d71f90a869b9e9503dd0974c41e3f"
+description = "Repair the native Paper Kaucja entity model, texture and animation lifecycle."
+
+[metadata]
+difficulty = "hard"
+category = "game-development"
+tags = ["minecraft", "paper", "java", "plugin", "entity-lifecycle"]
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240
+
+[verifier.environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240

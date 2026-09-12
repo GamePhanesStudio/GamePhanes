@@ -1,0 +1,36 @@
+name: minecraft-paper-kaucja-entity-visuals
+description: Repair the native Paper Kaucja entity model, texture and animation lifecycle.
+engine: minecraft
+runtime_adapter: minecraft
+version: 7
+source_intent_anchor: 'Minecraft Kaucja trajectory: fix entity textures, model structure,
+  animation direction and gameplay presentation.'
+real_behavior_contract:
+  starter_object: Paper JavaPlugin Kaucja with real ArmorStand entity, persistent
+    model/texture/animation state and player-triggered lifecycle
+  multi_step_events:
+  - two real players join Paper -> start plugin -> spawn a tagged ArmorStand
+  - apply texture -> change native pose for turn animation -> inspect entity PDC and
+    world state
+  - reject duplicate IDs, blank/oversized textures and unsupported animations without
+    mutating the entity
+  - reload and disable the plugin -> remove all native entities
+  state_transition: Kaucja moves stopped -> running, entity state grows model -> textured
+    -> animated, then reload/disable clears the world
+  boundary_behavior: duplicate IDs, invalid assets, unsupported animations, entity
+    isolation and lifecycle cleanup are checked against real Bukkit entities
+  observation: A real Paper JVM and two online test players observe ArmorStand UUIDs,
+    scoreboard tags, PersistentDataContainer values, pose and entity removal
+  runtime_adapter: minecraft
+deliverables:
+- src/main/java/com/gameforge/kaucja/KaucjaPlugin.java
+- src/main/resources/plugin.yml
+validation:
+- Paper server loads the Kaucja plugin against the pinned API
+- hidden multi-step Paper entity probe passes
+authoring:
+  schema_version: gameforgebench.authoring-pass.v1
+  contract_fingerprint: 8f56738abab8ecb55dcb16484e3cf818a8489a18d2b348664087da9909e674cd
+  contract_status: task_specific_runtime_contract
+  controls_status: pending_after_authoring_change
+  source: canonical status.tsv row

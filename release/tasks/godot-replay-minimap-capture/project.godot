@@ -1,0 +1,11 @@
+[application]
+config/name="Replay HUD Capture"
+run/main_scene="res://Main.tscn"
+
+[display]
+window/size/viewport_width=720
+window/size/viewport_height=1280
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

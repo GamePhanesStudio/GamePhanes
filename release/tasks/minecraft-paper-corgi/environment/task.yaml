@@ -1,0 +1,36 @@
+name: minecraft-paper-corgi-park-runtime
+description: Repair a Paper 1.20.4 Corgi and park plugin so native entities, park
+  furniture and interaction state remain server-authoritative.
+engine: minecraft
+runtime_adapter: minecraft
+version: 7
+source_intent_anchor: 'Minecraft mod trajectory: add Corgi entity behavior and a complete
+  park with paths, benches, bins, lights and dog-park interactions, while preserving
+  multiplayer correctness.'
+real_behavior_contract:
+  starter_object: Paper JavaPlugin GameForgePark with plugin.yml entrypoint, Corgi
+    entity BoundingBox and park bench collider
+  multi_step_events:
+  - load GameForgePark in Paper -> register a Corgi and a park bench
+  - transition the Corgi idle -> playing -> idle and seat player-1 on bench-1
+  - repeat interaction, send empty/unknown IDs, then reset/reload and inspect the
+    server snapshot
+  state_transition: Paper runtime state moves from empty to one Corgi/bench, Corgi
+    behavior changes across callbacks, and the bench seat changes from free to occupied
+  boundary_behavior: duplicate Corgi/bench registration, duplicate seating, empty
+    player IDs, unknown bench IDs and invalid Corgi states are rejected
+  observation: A real Paper JVM loads the JavaPlugin source and probe observes Bukkit
+    BoundingBox geometry, plugin state transitions and reload snapshot
+  runtime_adapter: minecraft
+deliverables:
+- src/main/java/com/gameforge/park/ParkPlugin.java
+- src/main/resources/plugin.yml
+validation:
+- Paper server loads the GameForgePark plugin source against the pinned API
+- hidden multi-step Paper runtime probe passes
+authoring:
+  schema_version: gameforgebench.authoring-pass.v1
+  contract_fingerprint: 3413de6f249c7e2ab20a4e198f25a687495af42215743eb3e9a54f259e0939f2
+  contract_status: task_specific_runtime_contract
+  controls_status: pending_after_authoring_change
+  source: canonical status.tsv row

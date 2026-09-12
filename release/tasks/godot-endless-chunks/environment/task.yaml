@@ -1,0 +1,31 @@
+name: godot-endless-streaming-level
+description: Generate deterministic endless chunks with spike hazards in gaps and
+  gated entity unlocks.
+runtime_adapter: godot
+real_behavior_contract:
+  starter_object: Main.tscn Godot scene with EndlessLevel streaming generator and
+    spike hazard slots
+  multi_step_events:
+  - configure seed -> generate chunk 0 -> generate chunk 1
+  - repeat chunk request -> test valid and invalid entity unlock progress -> mutate
+    snapshot
+  state_transition: seed configuration deterministically changes generated chunk data
+    and valid progress unlocks entities
+  boundary_behavior: repeated chunk requests are stable; invalid entities or progress
+    below three remain locked
+  observation: Godot headless probe observes native scene startup and EndlessLevel
+    chunk arrays/hazard state
+  runtime_adapter: godot
+deliverables:
+- Main.tscn
+- scripts/endless_level.gd
+validation:
+- Godot parses headlessly
+- hidden state probes pass
+version: 3
+authoring:
+  schema_version: gameforgebench.authoring-pass.v1
+  contract_fingerprint: c1236faf9ab0a8be45601797e0e578e60182d8b053b6c43849a98fc42f8161db
+  contract_status: task_specific_runtime_contract
+  controls_status: pending_after_authoring_change
+  source: canonical status.tsv row

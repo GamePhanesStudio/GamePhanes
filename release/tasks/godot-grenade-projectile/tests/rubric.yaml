@@ -1,0 +1,143 @@
+version: 7
+real_behavior_contract:
+  starter_object: Main.tscn Godot scene with a GrenadePhysics Node child that owns
+    projectile, burn-pool, and smoke lifecycle state
+  multi_step_events:
+  - load Main.tscn and obtain the GrenadePhysics child node
+  - create a grenade -> advance it by a fixed delta -> observe its moved position
+  - create a valid burn pool -> advance before and at its duration -> observe active
+    then inactive
+  - try non-positive speed, radius, duration, and delta -> verify no invalid state
+    is created or advanced
+  state_transition: a projectile moves from origin and a burn pool changes active
+    to inactive exactly at its duration; smoke changes active to extinguished at its
+    lifetime
+  boundary_behavior: non-positive speed/radius/duration are rejected and non-positive
+    delta does not advance state
+  observation: Godot headless loads Main.tscn, drives the native GrenadePhysics scene
+    node through ordered calls, and observes its runtime dictionaries
+  runtime_adapter: godot
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  task_specificity: unique_runtime_contract
+  task_contract:
+    goal: Implement the native GrenadePhysics node in Main.tscn for validated projectile
+      motion, burn-pool lifecycle, and smoke extinguishing.
+    starter_object: Main.tscn Node2D scene containing a GrenadePhysics child Node
+      and visible preview draw
+    event_sequence:
+    - load PackedScene
+    - get child node
+    - throw and advance projectile
+    - spawn and advance burn pool
+    - test invalid boundaries
+    - inspect smoke state
+    state_transition: projectile position changes by velocity*delta; burn-pool remaining
+      time reaches zero and active becomes false at its duration; smoke reaches extinguished
+      at lifetime
+    boundary_behavior: invalid creation inputs return empty dictionaries, non-positive
+      delta does not mutate state, and a completed pool cannot be advanced again
+    runtime_observation: Godot headless instantiates the actual Main.tscn scene and
+      reads child-node state after a deterministic multi-step sequence
+    runtime_adapter: godot
+  checks:
+  - id: grenade_probe
+    mode: godot_probe
+    weight: 1.0
+    dimensions:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    rationale: The native probe loads Main.tscn, exercises the GrenadePhysics child,
+      and checks projectile motion, pool lifecycle, smoke transition, and invalid-input
+      boundaries.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - grenade_probe
+    boundary_behavior:
+      required: true
+      check_ids:
+      - grenade_probe
+    runtime_observation:
+      required: true
+      check_ids:
+      - grenade_probe
+  no_op_requirement: A no-op script or direct function stub fails because the probe
+    requires a loaded scene child, moved projectile position, timed pool deactivation,
+    and smoke transition.
+  static_checks_role: File and parse checks support structure only; grenade_probe
+    is the sole behavior-scoring check.
+  evidence_basis:
+  - The probe loads res://Main.tscn and retrieves its GrenadePhysics child.
+  - The probe checks a legal throw has active state and moves from origin after 0.5
+    seconds.
+  - The probe checks a valid pool is active before duration and inactive at duration
+    with remaining zero.
+  - The probe checks invalid speed/radius/duration return empty dictionaries and non-positive
+    delta preserves state.
+  - The probe checks smoke_state before and at lifetime.
+  authoring:
+    schema_version: gameforgebench.rubric-authoring.v1
+    contract_fingerprint: 7772e5ab892b8b49ca342b4701e305a4a47bafbdb53768c713c00cc5132d4ae1
+    task_name: godot-grenade-throw-and-smoke-lifecycle
+    dimensions_in_rubric:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    controls_required_before_release: true
+  acceptance_mode: runtime_behavior
+  re_authoring_required: false
+  re_authoring_reason: null
+checks:
+- id: scene_exists
+  type: file_exists
+  path: Main.tscn
+  description: Godot grenade scene exists
+- id: grenade_script
+  type: file_exists
+  path: scripts/grenade_physics.gd
+  description: grenade physics node script exists
+- id: throw_api
+  type: file_contains
+  path: scripts/grenade_physics.gd
+  expected: func throw_grenade
+  description: projectile creation API exists
+- id: pool_api
+  type: file_contains
+  path: scripts/grenade_physics.gd
+  expected: func advance_burn_pool
+  description: burn-pool lifecycle API exists
+- id: headless_parse
+  type: command
+  command: godot --headless --path . --editor --quit
+  expected: exit_code=0
+  description: Godot project parses headlessly
+  path: Main.tscn
+- id: grenade_probe
+  type: godot_probe
+  path: Main.tscn
+  expected: GRENADE_SCENE_PROBE_OK
+  timeout: 60
+  probe_script: "extends SceneTree\nfunc _initialize() -> void:\n    var packed := load(\"\
+    res://Main.tscn\") as PackedScene\n    if packed == null: quit(1); return\n  \
+    \  var scene := packed.instantiate()\n    root.add_child(scene)\n    var grenade\
+    \ := scene.get_node(\"GrenadePhysics\") as GrenadePhysics\n    if grenade == null:\
+    \ quit(1); return\n    var projectile: Dictionary = grenade.throw_grenade(10.0,\
+    \ PI * 0.5)\n    if not projectile.get(\"active\", false): quit(1); return\n \
+    \   if not grenade.advance_projectile(projectile, 0.5): quit(1); return\n    var\
+    \ moved: Vector2 = projectile[\"position\"]\n    if absf(moved.x) > 0.001 or absf(moved.y\
+    \ - 5.0) > 0.001: quit(1); return\n    var pool: Dictionary = grenade.spawn_burn_pool(Vector2(2,\
+    \ 3), 4.0, 2.0)\n    if not pool.get(\"active\", false): quit(1); return\n   \
+    \ if not grenade.advance_burn_pool(pool, 0.5) or not pool.get(\"active\", false):\
+    \ quit(1); return\n    if not grenade.advance_burn_pool(pool, 1.5) or pool.get(\"\
+    active\", true) or float(pool.get(\"remaining\", 1.0)) != 0.0: quit(1); return\n\
+    \    if grenade.advance_burn_pool(pool, 0.1): quit(1); return\n    if not grenade.throw_grenade(0.0,\
+    \ 0.0).is_empty(): quit(1); return\n    if not grenade.spawn_burn_pool(Vector2.ZERO,\
+    \ 0.0, 2.0).is_empty(): quit(1); return\n    if not grenade.spawn_burn_pool(Vector2.ZERO,\
+    \ 2.0, 0.0).is_empty(): quit(1); return\n    var stable: Dictionary = grenade.spawn_burn_pool(Vector2.ZERO,\
+    \ 2.0, 1.0)\n    if grenade.advance_burn_pool(stable, 0.0): quit(1); return\n\
+    \    if not stable.get(\"active\", false): quit(1); return\n    if grenade.smoke_state(0.5,\
+    \ 1.0) != \"active\" or grenade.smoke_state(1.0, 1.0) != \"extinguished\": quit(1);\
+    \ return\n    print(\"GRENADE_SCENE_PROBE_OK\")\n    quit(0)\n"

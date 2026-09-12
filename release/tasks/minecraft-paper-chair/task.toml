@@ -1,0 +1,32 @@
+schema_version = "1.1"
+engine = "minecraft-paper"
+artifacts = [
+    "/app/data/",
+    "/app/src/",
+]
+
+[task]
+name = "gameforgebench/gameforgebench-020-history-ba298eb67ddbe3bc537c2b646513c1ebed2aefaa"
+description = "Repair a Paper 1.20.4 chair plugin so its seat collision and repeated interaction behavior are observable in a running Minecraft server."
+
+[metadata]
+difficulty = "unknown"
+category = "game-development"
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240
+
+[verifier.environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 10240

@@ -1,0 +1,229 @@
+{
+  "schema_version": "gameforgebench.harbor-0.22-controls.v1",
+  "harbor_version": "0.22.0",
+  "task_name": "gameforgebench-003-01a00bab-b458-7c13-a6d0-4060cfb8b203",
+  "task_version": 5,
+  "completed_at": "2026-09-08T07:36:15.620902+00:00",
+  "execution_host": "local-docker",
+  "image": "gameforgebench-003-godot-night:v7",
+  "platform": "linux/amd64",
+  "network_mode": "no-network",
+  "files_sha256": {
+    "Main.tscn": "8ba4c6626ddd034b67362706666058582ea2e56409b3b2fbefb3f2cf66b7d021",
+    "data/seed_digest.md": "8512ba245ee4366e23972f4041ca8e7a09266595e7653d2a16913890c850a778",
+    "environment/Dockerfile": "1b3c493921f47a47e13e8d7acfd9be3b98eb45706d8c90d91e5f043560496fcf",
+    "forge_output.md": "d9b17b027cda09854b4da313e7254746e0ee6128e783294e0d87476fad1bcc33",
+    "instruction.md": "ea2ef267415c4a69abb330e070b6244dba99a4797f98c8afc8810a301994d4a1",
+    "project.godot": "97dd2df5610dd5d8c18c852db458ad0462aefcd09db4dbaa80dd29412ca7d045",
+    "rubric.yaml": "e9f25107be1b9274c4c218fcf0e9f3e467549ff56839a0486ddca4f281eaa5ec",
+    "scripts/night_zone.gd": "b03a5d6a1e66b2488730c3edcf6ecff5392ba7ecc8fa93e04272d4b6c6ad442c",
+    "solution/Main.tscn": "8ba4c6626ddd034b67362706666058582ea2e56409b3b2fbefb3f2cf66b7d021",
+    "solution/project.godot": "97dd2df5610dd5d8c18c852db458ad0462aefcd09db4dbaa80dd29412ca7d045",
+    "solution/scripts/night_zone.gd": "b64edbee0f3be12a7fbbd6058adca734e1cabbfc92da5a558a2b407b69a22966",
+    "solution/solve.sh": "25d2778b494a98a9f20d202b56cc7f5f24b2a658433c5c4c3534c2f84291ce05",
+    "task.toml": "f68e32d1294e48e9e920f206535c806e225bbf6891e640d9ef6debd7a75048e2",
+    "task.yaml": "810f8cbbb76ee9f30803017269e493ffea52ea663d06540d387c81980c65eae7",
+    "tests/night_zone_probe.gd": "72147305fc95d166422d98acc5359c6eb3cc343a74b2e10b24389fa39c1c2a4e",
+    "tests/test.sh": "0dc889d211289afbf2bbf3253d4cd8628119932df529cd52e17ca7ca77df1c36",
+    "tests/test_outputs.py": "6454d68bf63f9c529650e2db701d4c7f45c5c52a81bc92bf3f9331f93702af5f"
+  },
+  "controls": {
+    "oracle": {
+      "returncode": 125,
+      "stdout": "",
+      "stderr": "docker: Error response from daemon: create data/gameforgebench-tencent-delivery-v0/tasks/gameforgebench-003-01a00bab-b458-7c13-a6d0-4060cfb8b203/tests: \"data/gameforgebench-tencent-delivery-v0/tasks/gameforgebench-003-01a00bab-b458-7c13-a6d0-4060cfb8b203/tests\" includes invalid characters for a local volume name, only \"[a-zA-Z0-9][a-zA-Z0-9_.-]\" are allowed. If you intended to pass a host directory, use absolute path\n\nRun 'docker run --help' for more information\n",
+      "reward": 0,
+      "checks": [
+        {
+          "id": "zone_project_parse",
+          "type": "command",
+          "path": "project.godot",
+          "passed": false
+        },
+        {
+          "id": "night_scene_binding",
+          "type": "file_contains",
+          "path": "Main.tscn",
+          "passed": false
+        },
+        {
+          "id": "protected_workspace",
+          "type": "integrity_probe",
+          "path": "Main.tscn",
+          "passed": false
+        },
+        {
+          "id": "night_zone_runtime",
+          "type": "godot_probe",
+          "path": "Main.tscn",
+          "passed": false
+        }
+      ]
+    },
+    "noop": {
+      "returncode": 125,
+      "stdout": "",
+      "stderr": "docker: Error response from daemon: create data/gameforgebench-tencent-delivery-v0/tasks/gameforgebench-003-01a00bab-b458-7c13-a6d0-4060cfb8b203: \"data/gameforgebench-tencent-delivery-v0/tasks/gameforgebench-003-01a00bab-b458-7c13-a6d0-4060cfb8b203\" includes invalid characters for a local volume name, only \"[a-zA-Z0-9][a-zA-Z0-9_.-]\" are allowed. If you intended to pass a host directory, use absolute path\n\nRun 'docker run --help' for more information\n",
+      "reward": 0,
+      "checks": [
+        {
+          "id": "zone_project_parse",
+          "type": "command",
+          "path": "project.godot",
+          "passed": false
+        },
+        {
+          "id": "night_scene_binding",
+          "type": "file_contains",
+          "path": "Main.tscn",
+          "passed": false
+        },
+        {
+          "id": "protected_workspace",
+          "type": "integrity_probe",
+          "path": "Main.tscn",
+          "passed": false
+        },
+        {
+          "id": "night_zone_runtime",
+          "type": "godot_probe",
+          "path": "Main.tscn",
+          "passed": false
+        }
+      ]
+    }
+  },
+  "repeat_controls": {
+    "oracle-1": {
+      "returncode": 125,
+      "stdout": "",
+      "stderr": "docker: Error response from daemon: create data/gameforgebench-tencent-delivery-v0/tasks/gameforgebench-003-01a00bab-b458-7c13-a6d0-4060cfb8b203/tests: \"data/gameforgebench-tencent-delivery-v0/tasks/gameforgebench-003-01a00bab-b458-7c13-a6d0-4060cfb8b203/tests\" includes invalid characters for a local volume name, only \"[a-zA-Z0-9][a-zA-Z0-9_.-]\" are allowed. If you intended to pass a host directory, use absolute path\n\nRun 'docker run --help' for more information\n",
+      "reward": 0,
+      "checks": [
+        {
+          "id": "zone_project_parse",
+          "type": "command",
+          "path": "project.godot",
+          "passed": false
+        },
+        {
+          "id": "night_scene_binding",
+          "type": "file_contains",
+          "path": "Main.tscn",
+          "passed": false
+        },
+        {
+          "id": "protected_workspace",
+          "type": "integrity_probe",
+          "path": "Main.tscn",
+          "passed": false
+        },
+        {
+          "id": "night_zone_runtime",
+          "type": "godot_probe",
+          "path": "Main.tscn",
+          "passed": false
+        }
+      ]
+    },
+    "oracle-2": {
+      "returncode": 125,
+      "stdout": "",
+      "stderr": "docker: Error response from daemon: create data/gameforgebench-tencent-delivery-v0/tasks/gameforgebench-003-01a00bab-b458-7c13-a6d0-4060cfb8b203/tests: \"data/gameforgebench-tencent-delivery-v0/tasks/gameforgebench-003-01a00bab-b458-7c13-a6d0-4060cfb8b203/tests\" includes invalid characters for a local volume name, only \"[a-zA-Z0-9][a-zA-Z0-9_.-]\" are allowed. If you intended to pass a host directory, use absolute path\n\nRun 'docker run --help' for more information\n",
+      "reward": 0,
+      "checks": [
+        {
+          "id": "zone_project_parse",
+          "type": "command",
+          "path": "project.godot",
+          "passed": false
+        },
+        {
+          "id": "night_scene_binding",
+          "type": "file_contains",
+          "path": "Main.tscn",
+          "passed": false
+        },
+        {
+          "id": "protected_workspace",
+          "type": "integrity_probe",
+          "path": "Main.tscn",
+          "passed": false
+        },
+        {
+          "id": "night_zone_runtime",
+          "type": "godot_probe",
+          "path": "Main.tscn",
+          "passed": false
+        }
+      ]
+    },
+    "noop-1": {
+      "returncode": 125,
+      "stdout": "",
+      "stderr": "docker: Error response from daemon: create data/gameforgebench-tencent-delivery-v0/tasks/gameforgebench-003-01a00bab-b458-7c13-a6d0-4060cfb8b203: \"data/gameforgebench-tencent-delivery-v0/tasks/gameforgebench-003-01a00bab-b458-7c13-a6d0-4060cfb8b203\" includes invalid characters for a local volume name, only \"[a-zA-Z0-9][a-zA-Z0-9_.-]\" are allowed. If you intended to pass a host directory, use absolute path\n\nRun 'docker run --help' for more information\n",
+      "reward": 0,
+      "checks": [
+        {
+          "id": "zone_project_parse",
+          "type": "command",
+          "path": "project.godot",
+          "passed": false
+        },
+        {
+          "id": "night_scene_binding",
+          "type": "file_contains",
+          "path": "Main.tscn",
+          "passed": false
+        },
+        {
+          "id": "protected_workspace",
+          "type": "integrity_probe",
+          "path": "Main.tscn",
+          "passed": false
+        },
+        {
+          "id": "night_zone_runtime",
+          "type": "godot_probe",
+          "path": "Main.tscn",
+          "passed": false
+        }
+      ]
+    },
+    "noop-2": {
+      "returncode": 125,
+      "stdout": "",
+      "stderr": "docker: Error response from daemon: create data/gameforgebench-tencent-delivery-v0/tasks/gameforgebench-003-01a00bab-b458-7c13-a6d0-4060cfb8b203: \"data/gameforgebench-tencent-delivery-v0/tasks/gameforgebench-003-01a00bab-b458-7c13-a6d0-4060cfb8b203\" includes invalid characters for a local volume name, only \"[a-zA-Z0-9][a-zA-Z0-9_.-]\" are allowed. If you intended to pass a host directory, use absolute path\n\nRun 'docker run --help' for more information\n",
+      "reward": 0,
+      "checks": [
+        {
+          "id": "zone_project_parse",
+          "type": "command",
+          "path": "project.godot",
+          "passed": false
+        },
+        {
+          "id": "night_scene_binding",
+          "type": "file_contains",
+          "path": "Main.tscn",
+          "passed": false
+        },
+        {
+          "id": "protected_workspace",
+          "type": "integrity_probe",
+          "path": "Main.tscn",
+          "passed": false
+        },
+        {
+          "id": "night_zone_runtime",
+          "type": "godot_probe",
+          "path": "Main.tscn",
+          "passed": false
+        }
+      ]
+    }
+  },
+  "g0_build": true,
+  "g1_oracle_pass": false,
+  "g2_noop_zero": true
+}

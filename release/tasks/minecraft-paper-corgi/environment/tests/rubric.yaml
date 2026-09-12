@@ -1,0 +1,178 @@
+version: 7
+real_behavior_contract:
+  starter_object: Paper JavaPlugin GameForgePark with plugin.yml entrypoint, Corgi
+    entity BoundingBox and park bench collider
+  multi_step_events:
+  - load GameForgePark in Paper -> register a Corgi and a park bench
+  - transition the Corgi idle -> playing -> idle and seat player-1 on bench-1
+  - repeat interaction, send empty/unknown IDs, then reset/reload and inspect the
+    server snapshot
+  state_transition: Paper runtime state moves from empty to one Corgi/bench, Corgi
+    behavior changes across callbacks, and the bench seat changes from free to occupied
+  boundary_behavior: duplicate Corgi/bench registration, duplicate seating, empty
+    player IDs, unknown bench IDs and invalid Corgi states are rejected
+  observation: A real Paper JVM loads the JavaPlugin source and probe observes Bukkit
+    BoundingBox geometry, plugin state transitions and reload snapshot
+  runtime_adapter: minecraft
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  task_specificity: unique_runtime_contract
+  task_contract:
+    goal: Repair the Paper JavaPlugin park runtime so ParkPlugin exposes the required
+      Corgi and bench state operations, fixed BoundingBox geometry, Corgi idle/playing
+      transitions, single-use bench seating, duplicate rejection, invalid-input rejection,
+      and reload reset behavior.
+    starter_object: Paper JavaPlugin GameForgePark with src/main/java/com/gameforge/park/ParkPlugin.java
+      and src/main/resources/plugin.yml, including Corgi entity BoundingBox and park
+      bench collider operations.
+    event_sequence:
+    - Load the GameForgePark plugin entrypoint in the Paper runtime.
+    - Inspect the Corgi and bench BoundingBox geometry.
+    - Register corgi-1 and bench-1.
+    - Attempt duplicate registration of corgi-1 and bench-1.
+    - Transition corgi-1 from idle to playing and from playing to idle.
+    - Seat player-1 on bench-1.
+    - Attempt duplicate seating for player-1 on bench-1.
+    - Attempt seating with an empty player ID and an unknown bench ID.
+    - Inspect the server snapshot.
+    - Reset the plugin state for reload and inspect the empty snapshot.
+    state_transition: The Paper runtime changes from empty state to one registered
+      Corgi and one registered bench, changes corgi-1 through playing and idle states,
+      changes bench-1 from free to occupied by player-1, and returns to an empty state
+      after resetForReload.
+    boundary_behavior: Duplicate Corgi registration, duplicate bench registration,
+      duplicate seating, an empty player ID, and an unknown bench ID are rejected.
+    runtime_observation: The runtime probe observes ParkPlugin.SOURCE_TAG, a Corgi
+      BoundingBox with height 1.0, a bench BoundingBox with X and Z spans of 1.0,
+      registration results, Corgi state transitions, seating results, serialized snapshot
+      contents, and reload reset contents.
+    runtime_adapter: minecraft
+  checks:
+  - id: paper_park_probe
+    mode: runtime
+    weight: 1.0
+    dimensions:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    rationale: The Paper probe directly exercises the native ParkPlugin static operations,
+      verifies the required SOURCE_TAG value and BoundingBox dimensions, checks registration
+      and duplicate rejection, verifies playing/idle Corgi transitions, validates
+      single-use bench interaction and invalid IDs, and confirms the occupied and
+      reset snapshots.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - paper_park_probe
+    boundary_behavior:
+      required: true
+      check_ids:
+      - paper_park_probe
+    runtime_observation:
+      required: true
+      check_ids:
+      - paper_park_probe
+  no_op_requirement: 'A no-op implementation must not pass: the runtime probe requires
+    successful first registration, successful valid state transitions, successful
+    first seating, exact BoundingBox dimensions, the expected occupied snapshot prefix,
+    and successful reset to the exact empty snapshot.'
+  static_checks_role: The existing file_exists and file_contains checks establish
+    only that plugin.yml and a JavaPlugin source are present. They are not included
+    as executable behavior checks because the permitted runtime-backed check ID list
+    contains only paper_park_probe.
+  evidence_basis:
+  - The supplied paper_park_probe is the only runtime-backed executable evidence.
+  - The probe requires ParkPlugin.SOURCE_TAG to equal b925e1743a3a.
+  - The probe checks corgiHitbox(), benchHitbox(), spawnCorgi(), placeBench(), setCorgiState(),
+    interact(), snapshot(), and resetForReload().
+  - The supplied manifest identifies the native plugin deliverables as ParkPlugin.java
+    and plugin.yml.
+  unsupported_claims:
+  - The current probe does not verify a BenchmarkFeature type or class.
+  - The current probe does not verify apply, ready, or a BenchmarkFeature snapshot
+    interface.
+  - The current probe does not verify that SOURCE_TAG is derived from the stated core-intent
+    SHA-256 prefix; it verifies only the literal value b925e1743a3a.
+  - The current probe does not verify sorted independent lists returned by snapshot;
+    it verifies only a string prefix and an empty reset string.
+  - The current probe does not verify park paths, decorations, bins, lights, signs,
+    dog-park regions, Corgi model geometry, Corgi AI beyond the tested state labels,
+    performance optimization, or multiplayer concurrency.
+  - The current probe does not verify invalid Corgi state rejection.
+  - The current probe does not verify plugin.yml metadata beyond the separate static
+    file checks.
+  - The current probe does not independently establish that a complete Paper server
+    lifecycle reload preserves server authority beyond the direct resetForReload()
+    call.
+  authoring:
+    schema_version: gameforgebench.rubric-authoring.v1
+    contract_fingerprint: 3413de6f249c7e2ab20a4e198f25a687495af42215743eb3e9a54f259e0939f2
+    task_name: minecraft-paper-corgi-park-runtime
+    dimensions_in_rubric:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    controls_required_before_release: true
+  acceptance_mode: runtime_behavior
+  re_authoring_required: false
+  re_authoring_reason: null
+checks:
+- id: minecraft_manifest
+  type: file_exists
+  path: src/main/resources/plugin.yml
+  description: Paper plugin manifest exists
+- id: minecraft_source
+  type: file_contains
+  path: src/main/java/com/gameforge/park/ParkPlugin.java
+  expected: extends JavaPlugin
+  description: Paper JavaPlugin park source exists
+- id: real_plugin_layout
+  type: file_contains
+  path: src/main/resources/plugin.yml
+  expected: GameForgePark
+  description: native plugin entrypoint exists
+- id: paper_park_probe
+  type: paper_probe
+  path: src/main/java/com/gameforge/park/ParkPlugin.java
+  expected: MINECRAFT_PAPER_PARK_PROBE_OK
+  timeout: 120
+  probe_script: 'if (!com.gameforge.park.ParkPlugin.SOURCE_TAG.equals("b925e1743a3a"))
+    throw new IllegalStateException("source tag");
+
+    org.bukkit.util.BoundingBox dog = com.gameforge.park.ParkPlugin.corgiHitbox();
+
+    if ((dog.getMaxY() - dog.getMinY()) != 1.0) throw new IllegalStateException("corgi
+    bounds");
+
+    org.bukkit.util.BoundingBox bench = com.gameforge.park.ParkPlugin.benchHitbox();
+
+    if ((bench.getMaxX() - bench.getMinX()) != 1.0 || (bench.getMaxZ() - bench.getMinZ())
+    != 1.0) throw new IllegalStateException("bench bounds");
+
+    if (!com.gameforge.park.ParkPlugin.spawnCorgi("corgi-1") || !com.gameforge.park.ParkPlugin.placeBench("bench-1"))
+    throw new IllegalStateException("register");
+
+    if (com.gameforge.park.ParkPlugin.spawnCorgi("corgi-1") || com.gameforge.park.ParkPlugin.placeBench("bench-1"))
+    throw new IllegalStateException("duplicate register");
+
+    if (!com.gameforge.park.ParkPlugin.setCorgiState("corgi-1", "playing") || !com.gameforge.park.ParkPlugin.setCorgiState("corgi-1",
+    "idle")) throw new IllegalStateException("corgi transition");
+
+    if (!com.gameforge.park.ParkPlugin.interact("player-1", "bench-1")) throw new
+    IllegalStateException("seat");
+
+    if (com.gameforge.park.ParkPlugin.interact("player-1", "bench-1") || com.gameforge.park.ParkPlugin.interact("",
+    "bench-1") || com.gameforge.park.ParkPlugin.interact("player-2", "missing")) throw
+    new IllegalStateException("interaction boundary");
+
+    if (!com.gameforge.park.ParkPlugin.snapshot().startsWith("1:1:1:player-1")) throw
+    new IllegalStateException("snapshot");
+
+    com.gameforge.park.ParkPlugin.resetForReload();
+
+    if (!com.gameforge.park.ParkPlugin.snapshot().equals("0:0:0:")) throw new IllegalStateException("reload");
+
+    System.out.println("MINECRAFT_PAPER_PARK_PROBE_OK");
+
+    '

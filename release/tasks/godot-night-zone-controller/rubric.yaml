@@ -1,0 +1,109 @@
+version: 5
+real_behavior_contract:
+  starter_object: Main.tscn NightZone Node2D with Landmark, Weapon, EnemySpawner, and
+    NavigationRegion child nodes and scripts/night_zone.gd
+  multi_step_events:
+  - start with the scene unconfigured -> call configure_night_mode()
+  - spawn_enemy(1) then a later wave -> apply path_cost to a positive base cost
+    -> attempt an invalid element against each relevant method
+  state_transition: night mode turns on, the controller gains registered landmarks and
+    a damaging weapon, a later wave carries higher health/speed, and path_cost returns
+    a reduced cost once night_mode is set
+  boundary_behavior: an invalid wave and a negative base cost do not corrupt the
+    controller state, and snapshot returns an isolated copy that cannot leak internal
+    mutations
+  observation: native Godot headless probe reads the configured dictionaries, per-wave
+    spawned enemy, path_cost result, rejected/unchanged state, and snapshot isolation
+  runtime_adapter: godot
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  task_specificity: unique_runtime_contract
+  task_contract:
+    goal: In an otherwise read-only top-down scene, make configure_night_mode() apply
+      the night slice to the NightZone state controller that scripts/night_zone.gd
+      is: enable night_mode, register at least two landmarks, add a weapon with positive
+      damage, set a non-1.0 path_cost_multiplier, preserve wave-scaling spawn_enemy,
+      preserve reduced path_cost under a clamped non-negative base, and keep snapshot
+      isolated. No external input layer or event bus is in scope.
+    starter_object: Main.tscn NightZone Node2D with Landmark, Weapon, EnemySpawner,
+      NavigationRegion and scripts/night_zone.gd in the day/unconfigured state.
+    event_sequence:
+    - load and instantiate Main.tscn and add it to the runtime tree.
+    - Call configure_night_mode() on the starter zone.
+    - Confirm night_mode is on and both landmarks and a damaging weapon are registered.
+    - Compare spawn_enemy(1) and spawn_enemy(3) native enemy dictionaries.
+    - Call path_cost(10.0) after configuration and expect a reduced result.
+    - Probe an invalid wave (spawn_enemy(0)) and negative path_cost(-1) for no error.
+    - Mutate the snapshot() result and re-read snapshot() to confirm isolation.
+    state_transition: The controller transitions from day to night, gains registered
+      landmarks and weapon data, and later waves are harder; path_cost returns less
+      once configured.
+    boundary_behavior: spawn_enemy with wave below 1 stays a valid hard floor; a
+      negative base_cost clamps to zero; snapshot isolation protects the internal
+      dictionaries from a caller's writes.
+    runtime_observation: The runtime instantiates Main.tscn and reads the starter scene
+      NativeZone nodes, night_mode, landmarks, weapons, per-wave enemy dictionaries,
+      path_cost results, and snapshot isolation.
+    runtime_adapter: godot
+  checks:
+  - id: night_zone_runtime
+    mode: runtime
+    weight: 1.0
+    dimensions:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    rationale: The supplied night_zone_probe.gd verifies daytime start, configure switching
+      the actual game state (night_mode, two landmarks, a damaging weapon), later-wave
+      enemy stats, reduced path cost under a clamped base, invalid-input safety, and
+      snapshot isolation.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - night_zone_runtime
+    boundary_behavior:
+      required: true
+      check_ids:
+      - night_zone_runtime
+    runtime_observation:
+      required: true
+      check_ids:
+      - night_zone_runtime
+  no_op_requirement: A submission must change the controller so the real godot scene
+    observes the applied night state through scripts/night_zone.gd; a text-only change
+    or a stale handle_event that does not change the runtime dictionaries fails.
+  static_checks_role: 'Static checks provide only supplementary metadata: zone_project_parse
+    verifies headless launch, night_scene_binding verifies the anchor nodes are still
+    present, and protected_workspace verifies nothing outside scripts/night_zone.gd
+    changed. They are not runtime evidence.'
+  evidence_basis:
+  - The supplied godot probe (night_zone_probe.gd) is the executable evidence for
+    configure, per-wave spawn, path cost, invalid input safety, and snapshot isolation.
+  - The parse and protected-workspace checks only confirm the project opens headlessly
+    and the rest of the directory is unchanged.
+  - No check reads private/vendor files or requires files not shipped with the bundle.
+  unsupported_claims: []
+checks:
+- id: zone_project_parse
+  type: command
+  command: godot --headless --path . --editor --quit
+  expected: exit_code=0
+  description: Godot project opens headlessly
+  path: project.godot
+- id: night_scene_binding
+  type: file_contains
+  path: Main.tscn
+  expected: Landmark
+  description: the scene still carries its Landmark child anchor
+- id: protected_workspace
+  type: integrity_probe
+  path: Main.tscn
+  description: files outside scripts/night_zone.gd stay unchanged
+- id: night_zone_runtime
+  type: godot_probe
+  expected: NIGHT_ZONE_RUNTIME_OK
+  timeout: 30
+  path: Main.tscn
+  description: native runtime verifies configure, per-wave spawn, path cost, invalid-input
+    safety, and snapshot isolation

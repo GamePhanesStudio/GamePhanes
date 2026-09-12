@@ -1,0 +1,4 @@
+name: Kaucja
+version: 1.0
+main: com.gameforge.kaucja.KaucjaPlugin
+api-version: '1.20'

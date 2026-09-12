@@ -1,0 +1,152 @@
+version: 8
+real_behavior_contract:
+  starter_object: Main.tscn Godot scene with SceneRunManager plugin-style scene execution
+    and crash recovery component
+  multi_step_events:
+  - instantiate manager -> enable tool -> run a valid tscn scene twice
+  - reject disabled/invalid paths -> create stale lock -> recover -> mutate snapshot
+  state_transition: scene execution count increases only while enabled and recovery
+    clears a stale lock
+  boundary_behavior: disabled manager and non-tscn paths are rejected; recovery with
+    no lock is safe and idempotent
+  observation: Godot headless probe observes native scene startup, execution count
+    and filesystem lock cleanup
+  runtime_adapter: godot
+behavior_scoring:
+  schema_version: gameforgebench.rubric-behavior.v1
+  task_specificity: unique_runtime_contract
+  task_contract:
+    goal: Implement a Godot scene_run manager in scripts/scene_run_manager.gd and
+      assemble it in the Main.tscn Godot project so that configure controls the tool
+      switch, run_scene accepts enabled .tscn scene paths and returns an execution
+      count, disabled or invalid paths are rejected, recover_after_crash(cache_dir)
+      removes scene_run.lock when present and is safe without a lock, and snapshot
+      returns independent state.
+    starter_object: Main.tscn Godot scene with SceneRunManager plugin-style scene
+      execution and crash recovery component.
+    event_sequence:
+    - Keep the manager disabled and attempt to run res://Main.tscn.
+    - Enable the manager with configure(true).
+    - Run the valid res://Main.tscn scene twice.
+    - Attempt to run the invalid non-tscn path bad.scene.
+    - Create cache_dir/scene_run.lock and call recover_after_crash(cache_dir).
+    - Call recovery again with no lock and inspect a snapshot copy for independent
+      state.
+    state_transition: The scene execution count increases only while the manager is
+      enabled, and valid scene execution increases the count on each accepted run.
+    boundary_behavior: A disabled manager rejects scene execution, non-tscn paths
+      are rejected, recovery removes a stale scene_run.lock, and recovery with no
+      lock is safe and idempotent.
+    runtime_observation: A Godot headless probe observes manager enable gating, valid
+      scene execution count, invalid-path rejection, stale-lock cleanup, and snapshot
+      independence.
+    runtime_adapter: godot
+  checks:
+  - id: scene_run_probe
+    mode: godot_probe
+    weight: 1.0
+    dimensions:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    rationale: The supplied Godot probe verifies disabled gating, native PackedScene
+      loading and instantiation of res://Main.tscn, invalid-path rejection, repeated
+      idempotent lock recovery, and independence of a mutated snapshot copy.
+  dimensions:
+    state_transition:
+      required: true
+      check_ids:
+      - scene_run_probe
+    boundary_behavior:
+      required: true
+      check_ids:
+      - scene_run_probe
+    runtime_observation:
+      required: true
+      check_ids:
+      - scene_run_probe
+  no_op_requirement:
+    required: true
+    description: Do not treat file existence or function-name presence alone as successful
+      behavior; the submitted project must satisfy the runtime-backed scene_run probe.
+  static_checks_role: The supplied manager_script, run_api, recovery_api, and headless_parse
+    checks are static or command-level evidence only. They may confirm file presence,
+    function text, and a zero exit code, but they are not included as behavior-scoring
+    checks because the allowed runtime-backed check ID list contains only scene_run_probe.
+  evidence_basis:
+  - The scene_run_probe creates a manager from res://scripts/scene_run_manager.gd.
+  - The scene_run_probe verifies that run_scene rejects res://Main.tscn before configure(true).
+  - The scene_run_probe verifies two enabled runs of res://Main.tscn return ok and
+    run_count values equal to 1 and 2.
+  - The scene_run_probe verifies that missing and non-tscn paths are rejected.
+  - The scene_run_probe creates user://scene_run_probe/scene_run.lock, calls recover_after_crash,
+    and verifies the file no longer exists.
+  - The scene_run_probe disables the manager after successful runs, repeats recovery
+    with no lock, and mutates a returned snapshot copy to verify later state is not
+    mutated.
+  unsupported_claims:
+  - The runtime probe instantiates Main.tscn as a PackedScene but does not run a separate
+    frame loop for its gameplay script.
+  - The current runtime probe checks one missing .tscn path and one non-tscn path;
+    it does not enumerate every possible invalid filesystem path.
+  - The current runtime probe does not verify the complete snapshot schema or all
+    manager state fields.
+  authoring:
+    schema_version: gameforgebench.rubric-authoring.v1
+    contract_fingerprint: a391b375a9ceb9496a321521ccf406b83ea74521670d170583d30204d478f876
+    task_name: godot-scene-run-plugin-recovery
+    dimensions_in_rubric:
+    - state_transition
+    - boundary_behavior
+    - runtime_observation
+    controls_required_before_release: true
+  acceptance_mode: runtime_behavior
+  re_authoring_required: false
+  re_authoring_reason: null
+checks:
+- id: manager_script
+  type: file_exists
+  path: scripts/scene_run_manager.gd
+  description: scene_run manager exists
+- id: run_api
+  type: file_contains
+  path: scripts/scene_run_manager.gd
+  expected: func run_scene
+  description: scene execution API exists
+- id: recovery_api
+  type: file_contains
+  path: scripts/scene_run_manager.gd
+  expected: func recover_after_crash
+  description: crash recovery API exists
+- id: headless_parse
+  type: command
+  command: godot --headless --path . --editor --quit
+  expected: exit_code=0
+  description: Godot project parses headlessly
+  path: Main.tscn
+- id: scene_run_probe
+  type: godot_probe
+  probe_script: "extends SceneTree\nfunc _initialize() -> void:\n    var manager := preload(\"\
+    res://scripts/scene_run_manager.gd\").new()\n    if manager.run_scene(\"res://Main.tscn\"\
+    ).get(\"ok\", true): quit(1); return\n    manager.configure(true)\n    var first:\
+    \ Dictionary = manager.run_scene(\"res://Main.tscn\")\n    if not first.get(\"\
+    ok\", false) or first.get(\"run_count\", 0) != 1: quit(1); return\n    var second:\
+    \ Dictionary = manager.run_scene(\"res://Main.tscn\")\n    if not second.get(\"\
+    ok\", false) or second.get(\"run_count\", 0) != 2: quit(1); return\n    if manager.run_scene(\"\
+    res://missing.tscn\").get(\"ok\", true): quit(1); return\n    if manager.run_scene(\"\
+    bad.scene\").get(\"ok\", true): quit(1); return\n    manager.configure(false)\n\
+    \    if manager.run_scene(\"res://Main.tscn\").get(\"ok\", true): quit(1); return\n\
+    \    var temp := \"user://scene_run_probe\"\n    DirAccess.make_dir_recursive_absolute(temp)\n\
+    \    var file := temp.path_join(\"scene_run.lock\")\n    var handle := FileAccess.open(file,\
+    \ FileAccess.WRITE)\n    handle.store_string(\"lock\")\n    handle = null\n  \
+    \  if not manager.recover_after_crash(temp) or FileAccess.file_exists(file): quit(1);\
+    \ return\n    if not manager.recover_after_crash(temp): quit(1); return\n    var\
+    \ copy: Dictionary = manager.snapshot()\n    copy[\"last_scene\"] = \"mutated\"\
+    \n    if str(manager.snapshot()[\"last_scene\"]) == \"mutated\": quit(1); return\n\
+    \    print(\"SCENE_RUN_PLUGIN_PROBE_OK\")\n    quit(0)\n"
+  expected: SCENE_RUN_PLUGIN_PROBE_OK
+  description: Godot runtime loads and instantiates a valid scene twice, enforces
+    enable and path boundaries, performs idempotent crash-lock recovery, and preserves
+    snapshot isolation.
+  path: Main.tscn
+  timeout: 60
